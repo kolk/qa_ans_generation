@@ -147,23 +147,28 @@ class Trainer(object):
                         logger.info("GpuRank %d: index: %d accum: %d"
                                     % (self.gpu_rank, i, accum))
                     cur_dataset = train_iter.get_cur_dataset()
-                    logger.info("cur_dataset")
-                    logger.info(cur_dataset)
+                    logger.info("cur_dataset examples keys")
+                    logger.info(cur_dataset.examples[0].__dict__.keys())
+                    logger.info("src ")
+                    logger.info(cur_dataset.examples[0].src)
+                    logger.info("ans ")
+                    logger.info(cur_dataset.examples[0].ans)
+                    logger.info("tgt ")
+                    logger.info(cur_dataset.examples[0].tgt)
                     logger.info(batch)
-                    logger.info("batch src and tgt")
-                    logger.info("src len " + str(len(batch.__dict__['src'])) + " tgt len " + str(len(batch.__dict__['tgt'])))
-                    for s, t in zip(batch.__dict__['src'], batch.__dict__['tgt']):
-                        logger.info(s)
-                        logger.info(t)
-                        logger.info("********************")
+                    logger.info(batch.src[0])
+                    logger.info(batch.src[1])
+                    logger.info("batch src")
+                    logger.info(len(batch.src))
+                    logger.info("batch tgt")
+                    logger.info(len(batch.tgt))
+                    logger.info("batch ans")
+                    logger.info(len(batch.ans))
+                    #logger.info("src len " + str(len(batch.__dict__['src'])) + " tgt len " + str(len(batch.__dict__['tgt'])))
 
                     self.train_loss.cur_dataset = cur_dataset
 
                     true_batchs.append(batch)
-
-                    #### vaishali ####
-                    true_batchs.append(batch)
-                    #### vaishali ####
 
                     if self.norm_method == "tokens":
                         num_tokens = batch.tgt[1:].data.view(-1) \

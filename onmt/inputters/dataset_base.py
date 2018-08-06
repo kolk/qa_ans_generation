@@ -117,4 +117,3 @@ class DatasetBase(torchtext.data.Dataset):
             else:
                 setattr(ex, name, val)
         return ex
-

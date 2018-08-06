@@ -123,12 +123,30 @@ def build_base_model(model_opt, fields, gpu, checkpoint=None):
     assert model_opt.model_type == "text", ("Unsupported model type %s" % (model_opt.model_type))
 
     # Build encoder.
+    logger.info("build_base_model")
     if model_opt.model_type == "text":
-        src_dict = fields["src"].vocab
-        feature_dicts = inputters.collect_feature_vocabs(fields, 'src')
+        src_dict = fields["src"].vocab # torchtext.vocab.Vocab object: dict_keys(['vectors', 'stoi', 'freqs', 'itos'])
+
+        feature_dicts = inputters.collect_feature_vocabs(fields, 'src') # list: []
         src_embeddings = build_embeddings(model_opt, src_dict, feature_dicts)
+        '''  Embeddings(
+  (make_embedding): Sequential(
+    (emb_luts): Elementwise(
+      (0): Embedding(24997, 500, padding_idx=1)
+    )
+  )
+)
+        '''
+        logger.info("src embeddings")
+        logger.info(src_embeddings)
         encoder = build_encoder(model_opt, src_embeddings)
 
+
+        ############### Modified ###############################
+        ans_dict = fields["ans"].vocab
+        ans_embeddings = build_embeddings(model_opt, ans_dict, feature_dicts)
+        encoder_ans = build_encoder(model_opt, ans_embeddings)
+        ##########################################################s
 
     # Build decoder.
     tgt_dict = fields["tgt"].vocab
@@ -149,7 +167,7 @@ def build_base_model(model_opt, fields, gpu, checkpoint=None):
 
     # Build NMTModel(= encoder + decoder).
     device = torch.device("cuda" if gpu else "cpu")
-    model = NMTModel(encoder, decoder)
+    model = NMTModel(encoder, encoder_ans, decoder)
 
     model.model_type = model_opt.model_type
 

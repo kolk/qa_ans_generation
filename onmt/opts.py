@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 import argparse
+from onmt.models.sru import CheckSRU
 
 
 def model_opts(parser):
@@ -83,8 +84,8 @@ def model_opts(parser):
                        help="""Have an additional layer between the last encoder
                        state and the first decoder state""")
     group.add_argument('-rnn_type', type=str, default='LSTM',
-                       choices=['LSTM', 'GRU'],
-                      
+                       choices=['LSTM', 'GRU', 'SRU'],
+                       action=CheckSRU,
                        help="""The gate type to use in the RNNs""")
     # group.add_argument('-residual',   action="store_true",
     #                     help="Add residual connections between RNN layers.")
@@ -138,10 +139,14 @@ def preprocess_opts(parser):
                        help="Path to the training source data")
     group.add_argument('-train_tgt', required=True,
                        help="Path to the training target data")
+    group.add_argument('-train_ans', required=True,
+                       help="Path to the training answer data")
     group.add_argument('-valid_src', required=True,
                        help="Path to the validation source data")
     group.add_argument('-valid_tgt', required=True,
                        help="Path to the validation target data")
+    group.add_argument('-valid_ans', required=True,
+                       help="Path to the validation answer data")
 
     group.add_argument('-src_dir', default="",
                        help="Source directory for image or audio files.")
@@ -167,15 +172,24 @@ def preprocess_opts(parser):
     group.add_argument('-tgt_vocab', default="",
                        help="""Path to an existing target vocabulary. Format:
                        one word per line.""")
+    group.add_argument('-ans_vocab', default="",
+                       help="""Path to an existing answer vocabulary. 
+                       Format: one word per line.""")
+
     group.add_argument('-features_vocabs_prefix', type=str, default='',
                        help="Path prefix to existing features vocabularies")
     group.add_argument('-src_vocab_size', type=int, default=50000,
                        help="Size of the source vocabulary")
     group.add_argument('-tgt_vocab_size', type=int, default=50000,
                        help="Size of the target vocabulary")
+    group.add_argument('-ans_vocab_size', type=int, default=50000,
+                       help="Size of the answer vocabulary")
+
 
     group.add_argument('-src_words_min_frequency', type=int, default=0)
     group.add_argument('-tgt_words_min_frequency', type=int, default=0)
+    group.add_argument('-ans_words_min_frequency', type=int, default=0)
+
 
     group.add_argument('-dynamic_dict', action='store_true',
                        help="Create dynamic dictionaries")
@@ -191,6 +205,10 @@ def preprocess_opts(parser):
     group.add_argument('-tgt_seq_length', type=int, default=50,
                        help="Maximum target sequence length to keep.")
     group.add_argument('-tgt_seq_length_trunc', type=int, default=0,
+                       help="Truncate target sequence length.")
+    group.add_argument('-ans_seq_length', type=int, default=50,
+                       help="Maximum target sequence length to keep.")
+    group.add_argument('-ans_seq_length_trunc', type=int, default=0,
                        help="Truncate target sequence length.")
     group.add_argument('-lower', action='store_true', help='lowercase data')
 
@@ -589,4 +607,3 @@ class DeprecateAction(argparse.Action):
         help = self.help if self.mdhelp is not None else ""
         msg = "Flag '%s' is deprecated. %s" % (flag_name, help)
         raise argparse.ArgumentTypeError(msg)
-

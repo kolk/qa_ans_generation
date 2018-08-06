@@ -38,7 +38,7 @@ class EncoderBase(nn.Module):
             n_batch_, = lengths.size()
             aeq(n_batch, n_batch_)
 
-    def forward(self, src, lengths=None):
+    def forward(self, src, src_ans, lengths=None):
         """
         Args:
             src (:obj:`LongTensor`):
@@ -52,4 +52,3 @@ class EncoderBase(nn.Module):
                 * memory bank for attention, `[src_len x batch x hidden]`
         """
         raise NotImplementedError
-

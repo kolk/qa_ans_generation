@@ -88,12 +88,17 @@ def main(opt):
     data_type = first_dataset.data_type
     logger.info("data_type")
     logger.info(data_type)
-    print(first_dataset)
+    logger.info("first_dataset")
+    logger.info(first_dataset)
+    logger.info(first_dataset.__dict__)
 
     # Load fields generated from preprocess phase.
     fields = _load_fields(first_dataset, data_type, opt, checkpoint)
     logger.info("fields ")
-    logger.info(fields)
+    for k, v in fields.items():
+        logger.info(k)
+        logger.info(v)
+        logger.info("*************")
 
     # Report src/tgt features.
 
@@ -118,6 +123,7 @@ def main(opt):
 
     # Build model saver
     model_saver = build_model_saver(model_opt, opt, model, fields, optim)
+
 
     trainer = build_trainer(
         opt, model, fields, optim, data_type, model_saver=model_saver)

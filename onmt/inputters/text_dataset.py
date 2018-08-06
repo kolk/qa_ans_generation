@@ -14,6 +14,7 @@ from onmt.inputters.dataset_base import (DatasetBase, UNK_WORD,
                                          PAD_WORD, BOS_WORD, EOS_WORD)
 from onmt.utils.misc import aeq
 
+from onmt.utils.logging import init_logger, logger
 
 class TextDataset(DatasetBase):
     """ Dataset for data_type=='text'
@@ -37,10 +38,11 @@ class TextDataset(DatasetBase):
                 out examples?
     """
 
-    def __init__(self, fields, src_examples_iter, tgt_examples_iter,
-                 num_src_feats=0, num_tgt_feats=0,
-                 src_seq_length=0, tgt_seq_length=0,
+    def __init__(self, fields, src_examples_iter, tgt_examples_iter, ans_examples_iter,
+                 num_src_feats=0, num_tgt_feats=0, num_ans_feats=0,
+                 src_seq_length=0, tgt_seq_length=0, ans_seq_length=0,
                  dynamic_dict=True, use_filter_pred=True):
+
         self.data_type = 'text'
 
         # self.src_vocabs: mutated in dynamic_dict, used in
@@ -49,15 +51,18 @@ class TextDataset(DatasetBase):
 
         self.n_src_feats = num_src_feats
         self.n_tgt_feats = num_tgt_feats
+        self.n_ans_feats = num_ans_feats
 
         # Each element of an example is a dictionary whose keys represents
         # at minimum the src tokens and their indices and potentially also
         # the src and tgt features and alignment information.
+
         if tgt_examples_iter is not None:
-            examples_iter = (self._join_dicts(src, tgt) for src, tgt in
-                             zip(src_examples_iter, tgt_examples_iter))
+            logger.info("making examples_iter")
+            examples_iter = (self._join_dicts(src, tgt, ans) for src, tgt, ans in
+                             zip(src_examples_iter, tgt_examples_iter, ans_examples_iter))
         else:
-            examples_iter = src_examples_iter
+            examples_iter = self._join_dicts(src_examples_iter, ans_examples_iter)
 
         if dynamic_dict:
             examples_iter = self._dynamic_dict(examples_iter)
@@ -85,7 +90,8 @@ class TextDataset(DatasetBase):
         def filter_pred(example):
             """ ? """
             return 0 < len(example.src) <= src_seq_length \
-                and 0 < len(example.tgt) <= tgt_seq_length
+                and 0 < len(example.tgt) <= tgt_seq_length \
+                and 0 < len(example.ans) <= ans_seq_length
 
         filter_pred = filter_pred if use_filter_pred else lambda x: True
 
@@ -93,16 +99,24 @@ class TextDataset(DatasetBase):
             out_examples, out_fields, filter_pred
         )
 
+
     def sort_key(self, ex):
         """ Sort using length of source sentences. """
         # Default to a balanced sort, prioritizing tgt len match.
         # TODO: make this configurable.
         if hasattr(ex, "tgt"):
-            return len(ex.src), len(ex.tgt)
-        return len(ex.src)
+            if hasattr(ex, "ans"):
+                return len(ex.src), len(ex.ans), len(ex.tgt)
+            else:
+                return len(ex.src), len(ex.tgt)
+        else:
+            if hasattr(ex, "ans"):
+                return len(ex.src), len(ex.ans)
+            else:
+                return len(ex.src)
 
     @staticmethod
-    def collapse_copy_scores(scores, batch, tgt_vocab, src_vocabs):
+    def collapse_copy_scores(scores, batch, tgt_vocab, src_vocabs, ans_vocabs):
         """
         Given scores from an expanded dictionary
         corresponeding to a batch, sums together copies,
@@ -198,7 +212,7 @@ class TextDataset(DatasetBase):
                 yield line
 
     @staticmethod
-    def get_fields(n_src_features, n_tgt_features):
+    def get_fields(n_src_features, n_tgt_features, n_ans_features):
         """
         Args:
             n_src_features (int): the number of source features to
@@ -228,6 +242,13 @@ class TextDataset(DatasetBase):
             fields["tgt_feat_" + str(j)] = \
                 torchtext.data.Field(init_token=BOS_WORD, eos_token=EOS_WORD,
                                      pad_token=PAD_WORD)
+
+        fields["ans"] = torchtext.data.Field(pad_token=PAD_WORD)
+
+        for j in range(n_ans_features):
+            fields["ans_feat_" + str(j)] = \
+                torchtext.data.Field(pad_token=PAD_WORD)
+
 
         def make_src(data, vocab):
             """ ? """
@@ -373,6 +394,8 @@ class ShardedTextCorpusIterator(object):
                     # lines. Thus we are not dividing exactly per
                     # `shard_size`, but it is not too much difference.
                     cur_pos = self.corpus.tell()
+                    logger.info("curr_pos")
+                    logger.info(cur_pos)
                     if cur_pos >= self.last_pos + self.shard_size:
                         self.last_pos = cur_pos
                         raise StopIteration
@@ -423,4 +446,3 @@ class ShardedTextCorpusIterator(object):
                                 for j, f in enumerate(feats))
 
         return example_dict
-
