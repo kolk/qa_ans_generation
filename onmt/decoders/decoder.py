@@ -9,6 +9,9 @@ from onmt.utils.misc import aeq
 from onmt.utils.rnn_factory import rnn_factory
 from onmt.modules.global_attention import GlobalAttention
 
+from onmt.utils.logging import logger
+
+
 class RNNDecoderBase(nn.Module):
     """
     Base recurrent attention-based decoder class.
@@ -126,6 +129,10 @@ class RNNDecoderBase(nn.Module):
         # Check
         assert isinstance(state, RNNDecoderState)
         # tgt.size() returns tgt length and batch
+        logger.info("tgt.size")
+        logger.info(tgt.size())
+        logger.info("mem size")
+        logger.info(memory_bank.size())
         _, tgt_batch, _ = tgt.size()
         _, memory_batch, _ = memory_bank.size()
         aeq(tgt_batch, memory_batch)
@@ -156,7 +163,7 @@ class RNNDecoderBase(nn.Module):
 
         return decoder_outputs, state, attns
 
-    def init_decoder_state(self, src, memory_bank, encoder_final):
+    def init_decoder_state(self, src, ans, memory_bank, encoder_final, encoder_ans_final):
         """ Init decoder state with last state of the encoder """
         def _fix_enc_hidden(hidden):
             # The encoder hidden is  (layers*directions) x batch x dim.
@@ -166,6 +173,19 @@ class RNNDecoderBase(nn.Module):
                                     hidden[1:hidden.size(0):2]], 2)
             return hidden
 
+        logger.info("init decoder state")
+        logger.info(len(encoder_final))
+        logger.info("encoder final ans")
+        logger.info(len(encoder_ans_final))
+        l = [_fix_enc_hidden(enc_hid) for enc_hid in encoder_final]
+        l_ans = [_fix_enc_hidden(enc_hid) for enc_hid in encoder_ans_final]
+
+        logger.info(len(l[0]))
+        rnn_decoderstate = RNNDecoderState(self.hidden_size,
+                        tuple([_fix_enc_hidden(enc_hid)
+                               for enc_hid in encoder_final]))
+        logger.info("rnn decoder state obj")
+        logger.info(rnn_decoderstate)
         if isinstance(encoder_final, tuple):  # LSTM
             return RNNDecoderState(self.hidden_size,
                                    tuple([_fix_enc_hidden(enc_hid)

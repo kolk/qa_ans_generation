@@ -56,27 +56,41 @@ class RNNEncoder(EncoderBase):
 
         emb = self.embeddings(src)
         # s_len, batch, emb_dim = emb.size()
-
-        emb_ans = self.embeddings(src_ans)
-
         packed_emb = emb
+
+        ######## Modified #########################
+        emb_ans = self.embeddings(src_ans)
         packed_emb_ans = emb_ans
+        ###########################################
+
+
         if lengths is not None and not self.no_pack_padded_seq:
             # Lengths data is wrapped inside a Tensor.
             lengths = lengths.view(-1).tolist()
             packed_emb = pack(emb, lengths)
+
+            ########### Modified #####################
             packed_emb_ans = pack(emb_ans, lengths)
+            #########################################
 
         memory_bank, encoder_final = self.rnn(packed_emb)
+
+        ############### Modified ################################
         memory_bank_ans, encoder_final_ans = self.rnn(packed_emb_ans)
+        ########################################################
 
         if lengths is not None and not self.no_pack_padded_seq:
             memory_bank = unpack(memory_bank)[0]
+
+            ############### Modified ############################
             memory_bank_ans = unpack(memory_bank_ans)[0]
+            ###################################################
 
         if self.use_bridge:
             encoder_final = self._bridge(encoder_final)
+            ############### Modified ###############################
             encoder_final_ans = self._bridge(encoder_final_ans)
+            #########################################################
 
         return encoder_final, encoder_final_ans, memory_bank
 

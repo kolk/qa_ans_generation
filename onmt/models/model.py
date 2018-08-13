@@ -45,7 +45,7 @@ class NMTModel(nn.Module):
 
         enc_final, enc_final_ans, memory_bank = self.encoder(src, ans, lengths)
         enc_state = \
-            self.decoder.init_decoder_state(src, memory_bank, enc_final)
+            self.decoder.init_decoder_state(src, ans, memory_bank, enc_final, enc_final_ans)
         decoder_outputs, dec_state, attns = \
             self.decoder(tgt, memory_bank,
                          enc_state if dec_state is None

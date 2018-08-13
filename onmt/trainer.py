@@ -15,7 +15,7 @@ import onmt.inputters as inputters
 import onmt.utils
 
 from onmt.utils.logging import logger
-
+import torch
 
 def build_trainer(opt, model, fields, optim, data_type, model_saver=None):
     """
@@ -155,6 +155,7 @@ class Trainer(object):
                     logger.info(cur_dataset.examples[0].ans)
                     logger.info("tgt ")
                     logger.info(cur_dataset.examples[0].tgt)
+
                     logger.info(batch)
                     logger.info(batch.src[0])
                     logger.info(batch.src[1])
@@ -164,7 +165,24 @@ class Trainer(object):
                     logger.info(len(batch.tgt))
                     logger.info("batch ans")
                     logger.info(len(batch.ans))
+
+                    max_i = 0
+                    max_i2 = 0
+                    logger.info("batch src")
+                    '''
+                    for b in batch.src:
+                        for b_ in b:
+                            logger.info("b batch src")
+                            logger.info(b)
+                            max_index_src3 = max(torch.b_)
+                            #max_index_src = max(b[0][:])
+                            #max_index_src2 = max(b[1][:])
+                            max_i = max(max_index_src3, max_i)
+                            #max_i2 = max(max_index_src2, max_i2)
+                    logger.info("max index " + str(max_i))
+                    #logger.info("max index2 " + str(max_i2))
                     #logger.info("src len " + str(len(batch.__dict__['src'])) + " tgt len " + str(len(batch.__dict__['tgt'])))
+                    '''
 
                     self.train_loss.cur_dataset = cur_dataset
 
@@ -246,6 +264,7 @@ class Trainer(object):
             self.valid_loss.cur_dataset = cur_dataset
 
             src = inputters.make_features(batch, 'src', self.data_type)
+            ans = inputters.make_features(batch, 'ans', self.data_type)
             if self.data_type == 'text':
                 _, src_lengths = batch.src
             else:
@@ -254,7 +273,8 @@ class Trainer(object):
             tgt = inputters.make_features(batch, 'tgt')
 
             # F-prop through the model.
-            outputs, attns, _ = self.model(src, tgt, src_lengths)
+            #src, ans, tgt, lengths, dec_state = None)
+            outputs, attns, _ = self.model(src, ans, tgt, src_lengths)
 
             # Compute loss.
             batch_stats = self.valid_loss.monolithic_compute_loss(
@@ -283,6 +303,11 @@ class Trainer(object):
 
             dec_state = None
             src = inputters.make_features(batch, 'src', self.data_type)
+
+            ########### Modified #####################
+            ans = inputters.make_features(batch, "ans", self.data_type)
+            ###################################
+
             if self.data_type == 'text':
                 _, src_lengths = batch.src
                 report_stats.n_src_words += src_lengths.sum().item()
@@ -298,8 +323,9 @@ class Trainer(object):
                 # 2. F-prop all but generator.
                 if self.grad_accum_count == 1:
                     self.model.zero_grad()
+                #src, ans, tgt, lengths, dec_state=None)
                 outputs, attns, dec_state = \
-                    self.model(src, tgt, src_lengths, dec_state)
+                    self.model(src, ans, tgt, src_lengths, dec_state)
 
                 # 3. Compute loss in shards for memory efficiency.
                 batch_stats = self.train_loss.sharded_compute_loss(
