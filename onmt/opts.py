@@ -68,9 +68,9 @@ def model_opts(parser):
                        help='Number of layers in enc/dec.')
     group.add_argument('-enc_layers', type=int, default=2,
                        help='Number of layers in the encoder')
-    group.add_argument('-dec_layers', type=int, default=2,
+    group.add_argument('-dec_layers', type=int, default=45,
                        help='Number of layers in the decoder')
-    group.add_argument('-rnn_size', type=int, default=500,
+    group.add_argument('-rnn_size', type=int, default=55,
                        help='Size of rnn hidden states')
     group.add_argument('-cnn_kernel_width', type=int, default=3,
                        help="""Size of windows in the cnn, the kernel_size is

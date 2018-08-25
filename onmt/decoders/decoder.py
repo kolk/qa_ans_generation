@@ -88,25 +88,30 @@ class RNNDecoderBase(nn.Module):
                 context_gate, self._input_size,
                 hidden_size, hidden_size, hidden_size
             )
+        logger.info("context_gate")
+        logger.info(context_gate)
 
         # Set up the standard attention.
         self._coverage = coverage_attn
+
+        ########### Modified #####################
         self.attn = GlobalAttention(
-            hidden_size, coverage=coverage_attn,
+            hidden_size*2, coverage=coverage_attn,
             attn_type=attn_type
         )
-
         # Set up a separated copy attention layer, if needed.
         self._copy = False
         if copy_attn and not reuse_copy_attn:
             self.copy_attn = GlobalAttention(
-                hidden_size, attn_type=attn_type
+                hidden_size*2, attn_type=attn_type
             )
+        ############################################
+
         if copy_attn:
             self._copy = True
         self._reuse_copy_attn = reuse_copy_attn
 
-    def forward(self, tgt, memory_bank, state, memory_lengths=None,
+    def forward(self, tgt, memory_bank, memory_bank_ans, state, memory_lengths=None,
                 step=None):
         """
         Args:
@@ -140,7 +145,7 @@ class RNNDecoderBase(nn.Module):
 
         # Run the forward pass of the RNN.
         decoder_final, decoder_outputs, attns = self._run_forward_pass(
-            tgt, memory_bank, state, memory_lengths=memory_lengths)
+            tgt, memory_bank, memory_bank_ans, state, memory_lengths=memory_lengths)
 
         # Update the state with the result.
         final_output = decoder_outputs[-1]
@@ -163,7 +168,7 @@ class RNNDecoderBase(nn.Module):
 
         return decoder_outputs, state, attns
 
-    def init_decoder_state(self, src, ans, memory_bank, encoder_final, encoder_ans_final):
+    def init_decoder_state(self, src, ans, memory_bank, memory_bank_ans, encoder_final, encoder_ans_final):
         """ Init decoder state with last state of the encoder """
         def _fix_enc_hidden(hidden):
             # The encoder hidden is  (layers*directions) x batch x dim.
@@ -177,10 +182,21 @@ class RNNDecoderBase(nn.Module):
         logger.info(len(encoder_final))
         logger.info("encoder final ans")
         logger.info(len(encoder_ans_final))
-        l = [_fix_enc_hidden(enc_hid) for enc_hid in encoder_final]
-        l_ans = [_fix_enc_hidden(enc_hid) for enc_hid in encoder_ans_final]
 
-        logger.info(len(l[0]))
+        ######### Modified ################################
+        l = [_fix_enc_hidden(enc_hid) for enc_hid in encoder_final] # list
+        l_ans = [_fix_enc_hidden(enc_hid) for enc_hid in encoder_ans_final] # list
+        #####################################
+
+        logger.info(len(l))
+        logger.info(type(l[0])) # <class 'torch.Tensor'>
+        logger.info("l[0] " + str(len(l[0])))
+        logger.info("l[1]" + str(len(l[1])))
+        logger.info("l_ans " + str(len(l_ans)))
+        logger.info("l_ans[0] " + str(len(l_ans[0])))
+        logger.info("l_ans[1] " + str(len(l_ans[1])))
+
+        ########### TODO: NEED TO INCORPORATE ENCODER_ANS_FINAL ######################
         rnn_decoderstate = RNNDecoderState(self.hidden_size,
                         tuple([_fix_enc_hidden(enc_hid)
                                for enc_hid in encoder_final]))
@@ -211,7 +227,7 @@ class StdRNNDecoder(RNNDecoderBase):
     or `copy_attn` support.
     """
 
-    def _run_forward_pass(self, tgt, memory_bank, state, memory_lengths=None):
+    def _run_forward_pass(self, tgt, memory_bank, memory_bank_ans, state, memory_lengths=None):
         """
         Private helper for running the specific RNN forward pass.
         Must be overriden by all subclasses.
@@ -258,6 +274,16 @@ class StdRNNDecoder(RNNDecoderBase):
             memory_lengths=memory_lengths
         )
         attns["std"] = p_attn
+
+        ########### Modified ##################
+
+        decoder_outputs_ans, p_attn_ans = self.attn(
+            rnn_output.transpose(0, 1).contiguous(),
+            memory_bank_ans.transpose(0, 1),
+            memory_lengths=memory_lengths
+        )
+        attns["std_ans"] = p_attn_ans
+        ########################################
 
         # Calculate the context gate.
         if self.context_gate is not None:
@@ -311,14 +337,18 @@ class InputFeedRNNDecoder(RNNDecoderBase):
           G --> H
     """
 
-    def _run_forward_pass(self, tgt, memory_bank, state, memory_lengths=None):
+    def _run_forward_pass(self, tgt, memory_bank, memory_bank_ans,  state, memory_lengths=None):
         """
         See StdRNNDecoder._run_forward_pass() for description
         of arguments and return values.
         """
+        logger.info("memory_bank")
+        logger.info(len(memory_bank))
+        logger.info(len(memory_bank[0]))
+        logger.info(len(memory_bank[0][0]))
         # Additional args check.
-        input_feed = state.input_feed.squeeze(0)
-        input_feed_batch, _ = input_feed.size()
+        input_feed = state.input_feed.squeeze(0) # list of tensors of len 64, len(input_feed[i]) = 500
+        input_feed_batch, _ = input_feed.size() # 64
         _, tgt_batch, _ = tgt.size()
         aeq(tgt_batch, input_feed_batch)
         # END Additional args check.
@@ -326,13 +356,29 @@ class InputFeedRNNDecoder(RNNDecoderBase):
         # Initialize local and return variables.
         decoder_outputs = []
         attns = {"std": []}
+
+        ########## Modified ################
+        attns["std_ans"] = []
+        ###################################
+
         if self._copy:
             attns["copy"] = []
+
+            ########### Modified ###########
+            attns["copy_ans"] = []
+            ################################
+
         if self._coverage:
             attns["coverage"] = []
 
+            ############# Modified #################
+            attns["coverage_ans"] = []
+            #######################################
+
+
+
         emb = self.embeddings(tgt)
-        assert emb.dim() == 3  # len x batch x embedding_dim
+        assert emb.dim() == 3  # len x batch x embedding_dim (51 x 64 x 500)
 
         hidden = state.hidden
         coverage = state.coverage.squeeze(0) \
@@ -345,10 +391,18 @@ class InputFeedRNNDecoder(RNNDecoderBase):
             decoder_input = torch.cat([emb_t, input_feed], 1)
 
             rnn_output, hidden = self.rnn(decoder_input, hidden)
+
+            ############## Modified ##########################
+            logger.info("rnn_output size")
+            logger.info(rnn_output.size())
+
+            memory_bank_final = torch.cat([memory_bank, memory_bank_ans], 1)
+
             decoder_output, p_attn = self.attn(
                 rnn_output,
-                memory_bank.transpose(0, 1),
+                memory_bank_final.transpose(0, 1),
                 memory_lengths=memory_lengths)
+            ####################################################
             if self.context_gate is not None:
                 # TODO: context gate should be employed
                 # instead of second RNN transform.

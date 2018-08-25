@@ -143,6 +143,7 @@ def build_base_model(model_opt, fields, gpu, checkpoint=None):
 
 
         ############### Modified ###############################
+
         ans_dict = fields["ans"].vocab
         ans_embeddings = build_embeddings(model_opt, ans_dict, feature_dicts)
         encoder_ans = build_encoder(model_opt, ans_embeddings)

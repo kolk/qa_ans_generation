@@ -1,6 +1,6 @@
 """ Onmt NMT Model base class definition """
 import torch.nn as nn
-
+from onmt.utils.logging import logger
 
 class NMTModel(nn.Module):
     """
@@ -43,11 +43,17 @@ class NMTModel(nn.Module):
         """
         tgt = tgt[:-1]  # exclude last target from inputs
 
-        enc_final, enc_final_ans, memory_bank = self.encoder(src, ans, lengths)
+        enc_final, memory_bank = self.encoder(src, lengths)
+        ######### Modified ##################
+        enc_final_ans, memory_bank_ans = self.encoder_ans(ans, lengths)
+        ###################################
         enc_state = \
-            self.decoder.init_decoder_state(src, ans, memory_bank, enc_final, enc_final_ans)
+            self.decoder.init_decoder_state(src, ans, memory_bank, memory_bank_ans, enc_final, enc_final_ans)
+
+        logger.info("memory lengths")
+        logger.info(lengths)
         decoder_outputs, dec_state, attns = \
-            self.decoder(tgt, memory_bank,
+            self.decoder(tgt, memory_bank, memory_bank_ans,
                          enc_state if dec_state is None
                          else dec_state,
                          memory_lengths=lengths)
