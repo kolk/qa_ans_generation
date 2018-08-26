@@ -96,14 +96,14 @@ class RNNDecoderBase(nn.Module):
 
         ########### Modified #####################
         self.attn = GlobalAttention(
-            hidden_size*2, coverage=coverage_attn,
+            hidden_size, coverage=coverage_attn,
             attn_type=attn_type
         )
         # Set up a separated copy attention layer, if needed.
         self._copy = False
         if copy_attn and not reuse_copy_attn:
             self.copy_attn = GlobalAttention(
-                hidden_size*2, attn_type=attn_type
+                hidden_size, attn_type=attn_type
             )
         ############################################
 
@@ -348,6 +348,8 @@ class InputFeedRNNDecoder(RNNDecoderBase):
         logger.info(len(memory_bank[0][0]))
         # Additional args check.
         input_feed = state.input_feed.squeeze(0) # list of tensors of len 64, len(input_feed[i]) = 500
+        logger.info("input feed forward")
+        logger.info(input_feed.size())
         input_feed_batch, _ = input_feed.size() # 64
         _, tgt_batch, _ = tgt.size()
         aeq(tgt_batch, input_feed_batch)
@@ -395,9 +397,12 @@ class InputFeedRNNDecoder(RNNDecoderBase):
             ############## Modified ##########################
             logger.info("rnn_output size")
             logger.info(rnn_output.size())
+            logger.info("memory bank size")
+            logger.info(memory_bank.size())
 
             memory_bank_final = torch.cat([memory_bank, memory_bank_ans], 1)
-
+            logger.info("memory_bank_final size")
+            logger.info(memory_bank_final.size())
             decoder_output, p_attn = self.attn(
                 rnn_output,
                 memory_bank_final.transpose(0, 1),
@@ -505,6 +510,13 @@ class RNNDecoderState(DecoderState):
         h_size = (batch_size, hidden_size)
         self.input_feed = self.hidden[0].data.new(*h_size).zero_() \
                               .unsqueeze(0)
+        logger.info("RNNDecoderState")
+        logger.info("hidden size")
+        logger.info(len(self.hidden))
+        logger.info(self.hidden[0].size())
+        logger.info("input_feed")
+        logger.info(self.input_feed.size())
+
 
     @property
     def _all(self):

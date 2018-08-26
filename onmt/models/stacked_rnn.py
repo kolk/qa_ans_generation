@@ -1,6 +1,7 @@
 """ Implementation of ONMT RNN for Input Feeding Decoding """
 import torch
 import torch.nn as nn
+from onmt.utils.logging import logger
 
 
 class StackedLSTM(nn.Module):
@@ -21,6 +22,12 @@ class StackedLSTM(nn.Module):
 
     def forward(self, input_feed, hidden):
         h_0, c_0 = hidden
+        logger.info("h_0")
+        logger.info(h_0.size())
+        logger.info("c_0 size")
+        logger.info(c_0.size())
+        logger.info(self.layers)
+
         h_1, c_1 = [], []
         for i, layer in enumerate(self.layers):
             h_1_i, c_1_i = layer(input_feed, (h_0[i], c_0[i]))

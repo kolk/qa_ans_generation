@@ -68,7 +68,7 @@ def model_opts(parser):
                        help='Number of layers in enc/dec.')
     group.add_argument('-enc_layers', type=int, default=2,
                        help='Number of layers in the encoder')
-    group.add_argument('-dec_layers', type=int, default=45,
+    group.add_argument('-dec_layers', type=int, default=2,
                        help='Number of layers in the decoder')
     group.add_argument('-rnn_size', type=int, default=55,
                        help='Size of rnn hidden states')
