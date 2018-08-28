@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 
 from onmt.utils.misc import aeq, sequence_mask
+from onmt.utils.logging import logger
 
 # This class is mainly used by decoder.py for RNNs but also
 # by the CNN / transformer decoder when copy attention is used
@@ -74,14 +75,14 @@ class GlobalAttention(nn.Module):
             "Please select a valid attention type.")
 
         if self.attn_type == "general":
-            self.linear_in = nn.Linear(dim, dim, bias=False)
+            self.linear_in = nn.Linear(dim*2, dim, bias=False)
         elif self.attn_type == "mlp":
             self.linear_context = nn.Linear(dim, dim, bias=False)
             self.linear_query = nn.Linear(dim, dim, bias=True)
             self.v = nn.Linear(dim, 1, bias=False)
         # mlp wants it with bias
         out_bias = self.attn_type == "mlp"
-        self.linear_out = nn.Linear(dim * 2, dim, bias=out_bias)
+        self.linear_out = nn.Linear(dim * 4, dim*2, bias=out_bias)
 
         self.softmax = nn.Softmax(dim=-1)
         self.tanh = nn.Tanh()
@@ -106,14 +107,27 @@ class GlobalAttention(nn.Module):
         src_batch, src_len, src_dim = h_s.size()
         tgt_batch, tgt_len, tgt_dim = h_t.size()
         aeq(src_batch, tgt_batch)
-        aeq(src_dim, tgt_dim)
+        ######### Modified #############
+        aeq(src_dim*2, tgt_dim)
+        #############################
         aeq(self.dim, src_dim)
 
         if self.attn_type in ["general", "dot"]:
+            logger.info("score h_s")
+            logger.info(h_s.size())
+            logger.info("score h_t")
+            logger.info(h_t.size())
             if self.attn_type == "general":
-                h_t_ = h_t.view(tgt_batch * tgt_len, tgt_dim)
-                h_t_ = self.linear_in(h_t_)
-                h_t = h_t_.view(tgt_batch, tgt_len, tgt_dim)
+                h_t_ = h_t.view(tgt_batch * tgt_len, tgt_dim) # 64*len, 110
+                logger.info("h_t_ size")
+                logger.info(h_t_.size())
+                h_t_ = self.linear_in(h_t_) # dim*2 -> dim
+                logger.info("new h_t_ size")
+                logger.info(h_t_.size())
+                ########## Modified ##########
+                h_t = h_t_.view(tgt_batch, tgt_len, src_dim)
+                #####################
+
             h_s_ = h_s.transpose(1, 2)
             # (batch, t_len, d) x (batch, d, s_len) --> (batch, t_len, s_len)
             return torch.bmm(h_t, h_s_)
@@ -132,7 +146,7 @@ class GlobalAttention(nn.Module):
 
             return self.v(wquh.view(-1, dim)).view(tgt_batch, tgt_len, src_len)
 
-    def forward(self, source, memory_bank, memory_lengths=None, coverage=None):
+    def forward(self, source, memory_bank, memory_bank_ans, memory_lengths=None, memory_lengths_ans=None, coverage=None):
         """
 
         Args:
@@ -150,6 +164,7 @@ class GlobalAttention(nn.Module):
         """
 
         # one step input
+
         if source.dim() == 2:
             one_step = True
             source = source.unsqueeze(1)
@@ -159,64 +174,121 @@ class GlobalAttention(nn.Module):
         batch, source_l, dim = memory_bank.size()
         batch_, target_l, dim_ = source.size()
         aeq(batch, batch_)
-        aeq(dim, dim_)
+        aeq(dim*2, dim_)
         aeq(self.dim, dim)
+
+        ############ Modified ##############
+        batch_ans, source_ans_l, dim_ans = memory_bank_ans.size()
+        aeq(batch_ans, batch_)
+        aeq(dim_ans*2, dim_)
+        ####################################################
+
         if coverage is not None:
             batch_, source_l_ = coverage.size()
             aeq(batch, batch_)
             aeq(source_l, source_l_)
+            ## Modified ##
+            aeq(batch_ans, batch_)
+            aeq(source_ans_l, source_l_)
+            #########
 
         if coverage is not None:
             cover = coverage.view(-1).unsqueeze(1)
             memory_bank += self.linear_cover(cover).view_as(memory_bank)
             memory_bank = self.tanh(memory_bank)
 
+            ############ Modified ####################
+            cover_ans = coverage.view(-1).unsqueeze(1)
+            memory_bank_ans += self.linear_cover(cover_ans).view_as(memory_bank_ans)
+            memory_bank_ans = self.tanh(memory_bank_ans)
+            #######################################
+
         # compute attention scores, as in Luong et al.
         align = self.score(source, memory_bank)
+
+        ####### Modified ################
+        align_ans = self.score(source, memory_bank_ans)
+
+        #################################3
+
 
         if memory_lengths is not None:
             mask = sequence_mask(memory_lengths, max_len=align.size(-1))
             mask = mask.unsqueeze(1)  # Make it broadcastable.
             align.masked_fill_(1 - mask, -float('inf'))
 
+        if memory_lengths_ans is not None:
+            mask = sequence_mask(memory_lengths_ans, max_len=align.size(-1))
+            mask = mask.unsqueeze(1)  # Make it broadcastable.
+            align_ans.masked_fill_(1 - mask, -float('inf'))
+
         # Softmax to normalize attention weights
         align_vectors = self.softmax(align.view(batch*target_l, source_l))
+        logger.info("align vectors")
+        logger.info(align_vectors.size())
+
         align_vectors = align_vectors.view(batch, target_l, source_l)
+        logger.info("new align vectors")
+        logger.info(align_vectors.size())
+
+        align_vectors_ans = self.softmax(align_ans.view(batch * target_l, source_ans_l))
+        align_vectors_ans = align_vectors_ans.view(batch, target_l, source_ans_l)
 
         # each context vector c_t is the weighted average
         # over all the source hidden states
         c = torch.bmm(align_vectors, memory_bank)
+        logger.info("c ")
+        logger.info(c.size())
+        c_ans = torch.bmm(align_vectors_ans, memory_bank_ans)
+
+        c_final = torch.cat([c, c_ans], 2)
 
         # concatenate
-        concat_c = torch.cat([c, source], 2).view(batch*target_l, dim*2)
-        attn_h = self.linear_out(concat_c).view(batch, target_l, dim)
+        concat_c = torch.cat([c_final, source], 2).view(batch*target_l, dim*4)
+        logger.info("concat_c")
+        logger.info(concat_c.size())
+        attn_h = self.linear_out(concat_c).view(batch, target_l, dim*2)
+
+        logger.info("attn_h size")
+        logger.info(attn_h.size())
+
         if self.attn_type in ["general", "dot"]:
             attn_h = self.tanh(attn_h)
 
         if one_step:
             attn_h = attn_h.squeeze(1)
             align_vectors = align_vectors.squeeze(1)
+            align_vectors_ans = align_vectors_ans.squeeze(1)
 
             # Check output sizes
             batch_, dim_ = attn_h.size()
             aeq(batch, batch_)
-            aeq(dim, dim_)
+            aeq(dim*2, dim_)
             batch_, source_l_ = align_vectors.size()
+            batch_ans_, source_l_ans_ = align_vectors_ans.size()
             aeq(batch, batch_)
             aeq(source_l, source_l_)
-
+            aeq(source_l, source_l_ans_)
         else:
             attn_h = attn_h.transpose(0, 1).contiguous()
             align_vectors = align_vectors.transpose(0, 1).contiguous()
+
             # Check output sizes
             target_l_, batch_, dim_ = attn_h.size()
-            aeq(target_l, target_l_)
-            aeq(batch, batch_)
-            aeq(dim, dim_)
-            target_l_, batch_, source_l_ = align_vectors.size()
-            aeq(target_l, target_l_)
-            aeq(batch, batch_)
-            aeq(source_l, source_l_)
 
-        return attn_h, align_vectors
+            aeq(target_l, target_l_)
+            aeq(batch, batch_)
+            aeq(dim*2, dim_)
+            target_l_, batch_, source_l_ = align_vectors.size()
+            target_l_ans_, batch_ans_, source_l_ans_ = align_vectors_ans.size()
+            aeq(target_l, target_l_)
+            aeq(target_l, target_l_ans_)
+            aeq(batch, batch_)
+            aeq(batch, batch_ans_)
+            aeq(source_l, source_l_)
+            aeq(source_l, source_l_ans_)
+            logger.info("align_vectors size")
+            logger.info(align_vectors.size())
+
+        return attn_h, align_vectors, align_vectors_ans
 

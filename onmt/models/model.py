@@ -49,7 +49,10 @@ class NMTModel(nn.Module):
         ###################################
         enc_state = \
             self.decoder.init_decoder_state(src, ans, memory_bank, memory_bank_ans, enc_final, enc_final_ans)
-
+        logger.info("model enc state input feed")
+        logger.info(enc_state.input_feed.size())
+        logger.info("model enc state hidden state")
+        logger.info(enc_state.hidden[0].size())
         logger.info("memory lengths")
         logger.info(lengths)
         decoder_outputs, dec_state, attns = \
