@@ -58,9 +58,9 @@ def load_fields_from_vocab(vocab, data_type="text"):
     n_tgt_features = len(collect_features(vocab, 'tgt'))
     n_ans_features = len(collect_features(vocab, 'ans'))
 
-    logger.info("n_src_features " + str(n_src_features))
-    logger.info("n_tgt_features" + str(n_tgt_features))
-    logger.info("n_ans_features " + str(n_ans_features))
+    #logger.info("n_src_features " + str(n_src_features))
+    #logger.info("n_tgt_features" + str(n_tgt_features))
+    #logger.info("n_ans_features " + str(n_ans_features))
 
     fields = TextDataset.get_fields(n_src_features, n_tgt_features, n_ans_features)
     #fields = get_fields(data_type, n_src_features, n_tgt_features)
@@ -156,12 +156,11 @@ def collect_features(fields, side="src"):
     feats = []
     for j in count():
         key = side + "_feat_" + str(j)
-        print("key " + key)
         if key not in fields:
             break
         feats.append(key)
-    logger.info("feats")
-    logger.info(feats)
+    #logger.info("feats")
+    #logger.info(feats)
     return feats
 
 
@@ -183,7 +182,9 @@ def build_dataset(fields, data_type, src_data_iter=None, src_path=None,
                   src_dir=None, tgt_data_iter=None, tgt_path=None,
                   src_seq_length=0, tgt_seq_length=0,
                   src_seq_length_trunc=0, tgt_seq_length_trunc=0,
-                  dynamic_dict=True, use_filter_pred=True,
+                  dynamic_dict=True, sample_rate=0,
+                  window_size=0, window_stride=0, window=None,
+                  normalize_audio=True, use_filter_pred=True,
                   ans_dir=None, ans_data_iter=None, ans_path=None,
                   ans_seq_length=0, ans_seq_length_trunc=0):
     """
@@ -382,20 +383,15 @@ class OrderedIterator(torchtext.data.Iterator):
 
     def create_batches(self):
         """ Create batches """
-        logger.info("self.batch_size " +  str(self.batch_size))
-        logger.info("self.batch_size_fn")
-        logger.info(self.batch_size_fn) # None
-        logger.info("self.sort_key")
-        logger.info(self.sort_key.__dict__) # {}
         d = self.data() # list
 
         if self.train:
             def _pool(data, random_shuffler):
                 for p in torchtext.data.batch(data, self.batch_size * 100):
-                    logger.info("torchtext.data.batch: p")
-                    logger.info(p[0].__dict__)
-                    logger.info("len(p) " + str(len(p)))
-                    logger.info("^^^^^^^^^^^^^^^^^^^^^^")
+                    #logger.info("torchtext.data.batch: p")
+                    #logger.info(p[0].__dict__)
+                    #logger.info("len(p) " + str(len(p)))
+                    #logger.info("^^^^^^^^^^^^^^^^^^^^^^")
                     p_batch = torchtext.data.batch(
                         sorted(p, key=self.sort_key),
                         self.batch_size, self.batch_size_fn)
@@ -405,12 +401,12 @@ class OrderedIterator(torchtext.data.Iterator):
             for j, b in enumerate(self.batches):
                 if j > 5:
                     break
-                logger.info("b elem")
-                logger.info(b) # 64 <torchtext.data.example.Example object at 0x7f9bfc04df28>
-                logger.info(b[0].__dict__)
-                logger.info(len(b[0].src))
-                logger.info(len(b[0].ans))
-                logger.info("(((((((((()))))))))))")
+                #logger.info("b elem")
+                #logger.info(b) # 64 <torchtext.data.example.Example object at 0x7f9bfc04df28>
+                #logger.info(b[0].__dict__)
+                #logger.info(len(b[0].src))
+                #logger.info(len(b[0].ans))
+                #logger.info("(((((((((()))))))))))")
         else:
             self.batches = []
             for b in torchtext.data.batch(self.data(), self.batch_size,
@@ -447,6 +443,7 @@ class DatasetLazyIter(object):
     def __iter__(self):
         dataset_iter = (d for d in self.datasets)
         while self.cur_iter is not None:
+
             '''
             for j, batch in enumerate(self.cur_iter):
                 if j > 5:
@@ -540,7 +537,6 @@ def build_dataset_iter(datasets, fields, opt, is_train=True):
 
     obj = DatasetLazyIter(datasets, fields, batch_size, batch_size_fn,
                            device, is_train)
-    logger.info("")
     return obj
 
 
@@ -575,7 +571,7 @@ def lazily_load_dataset(corpus_type, opt):
 
 
 def _load_fields(dataset, data_type, opt, checkpoint):
-    logger.info("opt.data " + opt.data ) # data/demo
+    #logger.info("opt.data " + opt.data ) # data/demo
     if checkpoint is not None:
         logger.info('Loading vocab from checkpoint at %s.' % opt.train_from)
         fields = load_fields_from_vocab(
@@ -599,8 +595,8 @@ def _load_fields(dataset, data_type, opt, checkpoint):
 def _collect_report_features(fields):
     src_features = collect_features(fields, side='src')
     tgt_features = collect_features(fields, side='tgt')
-    logger.info("src_features")
-    logger.info(src_features) # [] =>empty
-    logger.info("tgt_features")
-    logger.info(tgt_features)  # [] => empty
+    #logger.info("src_features")
+    #logger.info(src_features) # [] =>empty
+    #logger.info("tgt_features")
+    #logger.info(tgt_features)  # [] => empty
     return src_features, tgt_features

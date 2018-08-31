@@ -136,7 +136,7 @@ def build_save_dataset(corpus_type, fields, opt):
     else:
         src_corpus = opt.valid_src
         tgt_corpus = opt.valid_tgt
-        ans_corpus = opt.train_ans
+        ans_corpus = opt.valid_ans
 
     # Currently we only do preprocess sharding for corpus: data_type=='text'.
     if opt.data_type == 'text':
@@ -183,16 +183,23 @@ def main():
     logger.info("Building `Fields` object...")
     fields = inputters.get_fields(opt.data_type, src_nfeats, tgt_nfeats, ans_nfeats)
 
+    logger.info("fields src")
+    logger.info(fields.src.__dict__)
+    logger.info(fields.tgt.__dict__)
+    logger.info(fields.src_map.__dict__)
+    logger.info(fields.ans.__dict__)
+    logger.info(fields.indices.__dict__)
+    logger.info(fields.alignment.__dict__)
     '''
     logger.info("Building & saving training data...")
     train_dataset_files = build_save_dataset('train', fields, opt)
     logger.info(train_dataset_files)
 
     logger.info("Building & saving vocabulary...")
-    #build_save_vocab(train_dataset_files, fields, opt)
+    build_save_vocab(train_dataset_files, fields, opt)
 
     logger.info("Building & saving validation data...")
-    #build_save_dataset('valid', fields, opt)
+    build_save_dataset('valid', fields, opt)
     '''
 
 if __name__ == "__main__":

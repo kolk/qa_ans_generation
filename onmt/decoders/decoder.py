@@ -70,7 +70,9 @@ class RNNDecoderBase(nn.Module):
         self.decoder_type = 'rnn'
         self.bidirectional_encoder = bidirectional_encoder
         self.num_layers = num_layers
+        ################ Modified #####################3
         self.hidden_size = hidden_size*2
+        #########################################
         self.embeddings = embeddings
         self.dropout = nn.Dropout(dropout)
 
@@ -88,8 +90,9 @@ class RNNDecoderBase(nn.Module):
                 context_gate, self._input_size,
                 hidden_size, hidden_size, hidden_size
             )
-        logger.info("context_gate")
-        logger.info(context_gate)
+        #logger.info("context_gate")
+        #logger.info(context_gate)
+
 
         # Set up the standard attention.
         self._coverage = coverage_attn
@@ -134,10 +137,10 @@ class RNNDecoderBase(nn.Module):
         # Check
         assert isinstance(state, RNNDecoderState)
         # tgt.size() returns tgt length and batch
-        logger.info("tgt.size")
-        logger.info(tgt.size())
-        logger.info("mem size")
-        logger.info(memory_bank.size())
+        #logger.info("tgt.size")
+        #logger.info(tgt.size())
+        #logger.info("mem size")
+        #logger.info(memory_bank.size())
         _, tgt_batch, _ = tgt.size()
         _, memory_batch, _ = memory_bank.size()
         aeq(tgt_batch, memory_batch)
@@ -163,10 +166,13 @@ class RNNDecoderBase(nn.Module):
             decoder_outputs = torch.stack(decoder_outputs)
 
             for k in attns:
-                logger.info("k")
-                logger.info(k)
+                #logger.info("k")
+                #logger.info(k)
                 if type(attns[k]) == list:
                     attns[k] = torch.stack(attns[k])
+
+        #logger.info("decoder forward decoder_outputs")
+        #logger.info(decoder_outputs.size())
 
         return decoder_outputs, state, attns
 
@@ -182,37 +188,37 @@ class RNNDecoderBase(nn.Module):
 
             return hidden
 
-        logger.info("init decoder state")
-        logger.info(len(encoder_final))
-        logger.info(encoder_final[0].size())
-        logger.info("encoder final ans")
-        logger.info(len(encoder_ans_final))
+        #logger.info("init decoder state")
+        #logger.info(len(encoder_final))
+        #logger.info(encoder_final[0].size())
+        #logger.info("encoder final ans")
+        #logger.info(len(encoder_ans_final))
 
         ######### Modified ################################
         l = [_fix_enc_hidden(enc_hid) for enc_hid in encoder_final] # list
         l_ans = [_fix_enc_hidden(enc_hid) for enc_hid in encoder_ans_final] # list
         for enc_hid in encoder_final:
             hid = _fix_enc_hidden(enc_hid)
-            logger.info("fix enc hidden")
-            logger.info(hid.size())
+            #logger.info("fix enc hidden")
+            #logger.info(hid.size())
         l_final = [torch.cat([enc_q, enc_ans], 2) for enc_q, enc_ans in zip(encoder_final, encoder_ans_final)]
-        logger.info("l_final")
-        logger.info(l_final[0].size())
+        #logger.info("l_final")
+        #logger.info(l_final[0].size())
         ####################################
 
-        logger.info(len(l))
-        logger.info(type(l[0])) # <class 'torch.Tensor'>
-        logger.info("l[0] " + str(len(l[0])))
-        logger.info("l[1]" + str(len(l[1])))
-        logger.info("l_ans " + str(len(l_ans)))
-        logger.info("l_ans[0] " + str(len(l_ans[0])))
-        logger.info("l_ans[1] " + str(len(l_ans[1])))
+        #logger.info(len(l))
+        #logger.info(type(l[0])) # <class 'torch.Tensor'>
+        #logger.info("l[0] " + str(len(l[0])))
+        #logger.info("l[1]" + str(len(l[1])))
+        #logger.info("l_ans " + str(len(l_ans)))
+        #logger.info("l_ans[0] " + str(len(l_ans[0])))
+        #logger.info("l_ans[1] " + str(len(l_ans[1])))
 
         ########### Modified ######################
         rnn_decoderstate = RNNDecoderState(self.hidden_size,
                         tuple(l_final))
-        logger.info("rnn decoder state obj")
-        logger.info(rnn_decoderstate)
+        #logger.info("rnn decoder state obj")
+        #logger.info(rnn_decoderstate)
         if isinstance(encoder_final, tuple):  # LSTM
             return RNNDecoderState(self.hidden_size,
                                    tuple(l_final))
@@ -353,10 +359,10 @@ class InputFeedRNNDecoder(RNNDecoderBase):
         See StdRNNDecoder._run_forward_pass() for description
         of arguments and return values.
         """
-        logger.info("memory_bank")
-        logger.info(len(memory_bank))
-        logger.info(len(memory_bank[0]))
-        logger.info(len(memory_bank[0][0]))
+        #logger.info("memory_bank")
+        #logger.info(len(memory_bank))
+        #logger.info(len(memory_bank[0]))
+        #logger.info(len(memory_bank[0][0]))
         # Additional args check.
         input_feed = state.input_feed.squeeze(0) # list of tensors of len 64, len(input_feed[i]) = 500 [ size(): [batch x opts.rnn_size]
         input_feed_batch, _ = input_feed.size() # 64
@@ -399,18 +405,20 @@ class InputFeedRNNDecoder(RNNDecoderBase):
         for _, emb_t in enumerate(emb.split(1)):
             emb_t = emb_t.squeeze(0)
             decoder_input = torch.cat([emb_t, input_feed], 1)
-            logger.info("decoder input size")
-            logger.info(decoder_input.size())
+            #logger.info("decoder input size")
+            #logger.info(decoder_input.size())
+            #logger.info("hidden size")
+            #logger.info(hidden[0].size())
             rnn_output, hidden = self.rnn(decoder_input, hidden)
-            logger.info("rnn_output size")
-            logger.info(rnn_output.size())
-            logger.info("hidden size")
-            logger.info(hidden[0].size())
+            #logger.info("rnn_output size")
+            #logger.info(rnn_output.size())
+            #logger.info("hidden size")
+            #logger.info(hidden[0].size())
             ############## Modified ##########################
-            logger.info("rnn_output size")
-            logger.info(rnn_output.size())
-            logger.info("memory bank size")
-            logger.info(memory_bank.size())
+            #logger.info("rnn_output size")
+            #logger.info(rnn_output.size())
+            #logger.info("memory bank size")
+            #logger.info(memory_bank.size())
 
             #memory_bank_final = torch.cat([memory_bank, memory_bank_ans], 1)
             #logger.info("memory_bank_final size")
@@ -422,6 +430,12 @@ class InputFeedRNNDecoder(RNNDecoderBase):
                 memory_bank_ans.transpose(0, 1),
                 memory_lengths=memory_lengths,
                 memory_lengths_ans = memory_lengths)
+            #logger.info("decoder_output")
+            #logger.info(decoder_output.size())
+            #logger.info("p_attn")
+            #logger.info(p_attn.size())
+            #logger.info("p_attn_ans")
+            #logger.info(p_attn_ans.size())
             ####################################################
             if self.context_gate is not None:
                 # TODO: context gate should be employed
@@ -450,6 +464,13 @@ class InputFeedRNNDecoder(RNNDecoderBase):
             elif self._copy:
                 attns["copy"] = attns["std"]
         # Return result.
+        #logger.info("hidden size")
+        #logger.info(hidden[0].size())
+        #logger.info("decoder_outputs len")
+        #logger.info(len(decoder_outputs))
+        #logger.info("decoder outputs 0 index")
+        #logger.info(decoder_outputs[0].size())
+        #logger.info("attentions")
         return hidden, decoder_outputs, attns
 
     def _build_rnn(self, rnn_type, input_size,
@@ -526,12 +547,12 @@ class RNNDecoderState(DecoderState):
         h_size = (batch_size, hidden_size)
         self.input_feed = self.hidden[0].data.new(*h_size).zero_() \
                               .unsqueeze(0)
-        logger.info("RNNDecoderState")
-        logger.info("hidden size")
-        logger.info(len(self.hidden))
-        logger.info(self.hidden[0].size())
-        logger.info("input_feed")
-        logger.info(self.input_feed.size())
+        #logger.info("RNNDecoderState")
+        #logger.info("hidden size")
+        #logger.info(len(self.hidden))
+        #logger.info(self.hidden[0].size())
+        #logger.info("input_feed")
+        #logger.info(self.input_feed.size())
 
 
     @property

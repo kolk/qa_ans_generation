@@ -113,17 +113,17 @@ class GlobalAttention(nn.Module):
         aeq(self.dim, src_dim)
 
         if self.attn_type in ["general", "dot"]:
-            logger.info("score h_s")
-            logger.info(h_s.size())
-            logger.info("score h_t")
-            logger.info(h_t.size())
+            #logger.info("score h_s")
+            #logger.info(h_s.size())
+            #logger.info("score h_t")
+            #logger.info(h_t.size())
             if self.attn_type == "general":
                 h_t_ = h_t.view(tgt_batch * tgt_len, tgt_dim) # 64*len, 110
-                logger.info("h_t_ size")
-                logger.info(h_t_.size())
+                #logger.info("h_t_ size")
+                #logger.info(h_t_.size())
                 h_t_ = self.linear_in(h_t_) # dim*2 -> dim
-                logger.info("new h_t_ size")
-                logger.info(h_t_.size())
+                #logger.info("new h_t_ size")
+                #logger.info(h_t_.size())
                 ########## Modified ##########
                 h_t = h_t_.view(tgt_batch, tgt_len, src_dim)
                 #####################
@@ -224,12 +224,12 @@ class GlobalAttention(nn.Module):
 
         # Softmax to normalize attention weights
         align_vectors = self.softmax(align.view(batch*target_l, source_l))
-        logger.info("align vectors")
-        logger.info(align_vectors.size())
+        #logger.info("align vectors")
+        #logger.info(align_vectors.size())
 
         align_vectors = align_vectors.view(batch, target_l, source_l)
-        logger.info("new align vectors")
-        logger.info(align_vectors.size())
+        #logger.info("new align vectors")
+        #logger.info(align_vectors.size())
 
         align_vectors_ans = self.softmax(align_ans.view(batch * target_l, source_ans_l))
         align_vectors_ans = align_vectors_ans.view(batch, target_l, source_ans_l)
@@ -237,20 +237,20 @@ class GlobalAttention(nn.Module):
         # each context vector c_t is the weighted average
         # over all the source hidden states
         c = torch.bmm(align_vectors, memory_bank)
-        logger.info("c ")
-        logger.info(c.size())
+        #logger.info("c ")
+        #logger.info(c.size())
         c_ans = torch.bmm(align_vectors_ans, memory_bank_ans)
 
         c_final = torch.cat([c, c_ans], 2)
 
         # concatenate
         concat_c = torch.cat([c_final, source], 2).view(batch*target_l, dim*4)
-        logger.info("concat_c")
-        logger.info(concat_c.size())
+        #logger.info("concat_c")
+        #logger.info(concat_c.size())
         attn_h = self.linear_out(concat_c).view(batch, target_l, dim*2)
 
-        logger.info("attn_h size")
-        logger.info(attn_h.size())
+        #logger.info("attn_h size")
+        #logger.info(attn_h.size())
 
         if self.attn_type in ["general", "dot"]:
             attn_h = self.tanh(attn_h)
@@ -287,8 +287,8 @@ class GlobalAttention(nn.Module):
             aeq(batch, batch_ans_)
             aeq(source_l, source_l_)
             aeq(source_l, source_l_ans_)
-            logger.info("align_vectors size")
-            logger.info(align_vectors.size())
+            #logger.info("align_vectors size")
+            #logger.info(align_vectors.size())
 
         return attn_h, align_vectors, align_vectors_ans
 

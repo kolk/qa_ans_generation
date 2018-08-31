@@ -137,16 +137,19 @@ def build_base_model(model_opt, fields, gpu, checkpoint=None):
   )
 )
         '''
-        logger.info("src embeddings")
-        logger.info(src_embeddings)
+        #logger.info("src embeddings")
+        #logger.info(src_embeddings)
+        logger.info("bulding question encoder")
         encoder = build_encoder(model_opt, src_embeddings)
-
+        logger.info(encoder)
 
         ############### Modified ###############################
 
         ans_dict = fields["ans"].vocab
         ans_embeddings = build_embeddings(model_opt, ans_dict, feature_dicts)
+        logger.info("building answer encoder")
         encoder_ans = build_encoder(model_opt, ans_embeddings)
+        logger.info(encoder_ans)
         ##########################################################s
 
     # Build decoder.
@@ -175,7 +178,7 @@ def build_base_model(model_opt, fields, gpu, checkpoint=None):
     # Build Generator.
     if not model_opt.copy_attn:
         generator = nn.Sequential(
-            nn.Linear(model_opt.rnn_size, len(fields["tgt"].vocab)),
+            nn.Linear(model_opt.rnn_size*2, len(fields["tgt"].vocab)),
             nn.LogSoftmax(dim=-1))
         if model_opt.share_decoder_embeddings:
             generator[0].weight = decoder.embeddings.word_lut.weight

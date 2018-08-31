@@ -19,14 +19,16 @@ class StackedLSTM(nn.Module):
         for _ in range(num_layers):
             self.layers.append(nn.LSTMCell(input_size, rnn_size))
             input_size = rnn_size
+        #logger.info("StackedLSTM")
+        #logger.info("rnn_size " + str(rnn_size))
 
     def forward(self, input_feed, hidden):
         h_0, c_0 = hidden
-        logger.info("h_0")
-        logger.info(h_0.size())
-        logger.info("c_0 size")
-        logger.info(c_0.size())
-        logger.info(self.layers)
+        #logger.info("h_0")
+        #logger.info(h_0.size())
+        #logger.info("c_0 size")
+        #logger.info(c_0.size())
+        #logger.info(self.layers)
 
         h_1, c_1 = [], []
         for i, layer in enumerate(self.layers):

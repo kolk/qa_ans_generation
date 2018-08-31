@@ -9,7 +9,7 @@ from torch.nn.utils.rnn import pad_packed_sequence as unpack
 
 from onmt.encoders.encoder import EncoderBase
 from onmt.utils.rnn_factory import rnn_factory
-
+from onmt.utils.logging import logger
 
 class RNNEncoder(EncoderBase):
     """ A generic recurrent neural network encoder.
@@ -54,6 +54,8 @@ class RNNEncoder(EncoderBase):
         "See :obj:`EncoderBase.forward()`"
         self._check_args(src, lengths)
 
+        #logger.info("rnn_encoder forward src")
+        #logger.info(src.size())
         emb = self.embeddings(src)
         # s_len, batch, emb_dim = emb.size()
         packed_emb = emb

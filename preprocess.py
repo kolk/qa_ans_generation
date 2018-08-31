@@ -88,8 +88,6 @@ def build_save_in_shards(src_corpus, tgt_corpus, ans_corpus, fields,
                     % opt.max_shard_size)
 
     ret_list = []
-
-
     src_iter = inputters.ShardedTextCorpusIterator(
         src_corpus, opt.src_seq_length_trunc,
         "src", opt.max_shard_size)
@@ -102,7 +100,6 @@ def build_save_in_shards(src_corpus, tgt_corpus, ans_corpus, fields,
         "ans", opt.max_shard_size,
         assoc_iter=src_iter)
 
-
     index = 0
     while not src_iter.hit_end():
         index += 1
@@ -113,7 +110,6 @@ def build_save_in_shards(src_corpus, tgt_corpus, ans_corpus, fields,
             tgt_seq_length=opt.tgt_seq_length,
             ans_seq_length=opt.ans_seq_length,
             dynamic_dict=opt.dynamic_dict)
-
 
         # We save fields in vocab.pt separately, so make it empty.
         dataset.fields = []
@@ -140,7 +136,7 @@ def build_save_dataset(corpus_type, fields, opt):
     else:
         src_corpus = opt.valid_src
         tgt_corpus = opt.valid_tgt
-        ans_corpus = opt.train_ans
+        ans_corpus = opt.valid_ans
 
     # Currently we only do preprocess sharding for corpus: data_type=='text'.
     if opt.data_type == 'text':
@@ -186,19 +182,25 @@ def main():
 
     logger.info("Building `Fields` object...")
     fields = inputters.get_fields(opt.data_type, src_nfeats, tgt_nfeats, ans_nfeats)
-    logger.info("fields")
-    logger.info(fields)
+
+    logger.info("fields src")
+    logger.info(fields['src'].__dict__)
+    logger.info(fields['tgt'].__dict__)
+    logger.info(fields['src_map'].__dict__)
+    logger.info(fields['ans'].__dict__)
+    logger.info(fields['indices'].__dict__)
+    logger.info(fields['alignment'].__dict__)
+
 
     logger.info("Building & saving training data...")
     train_dataset_files = build_save_dataset('train', fields, opt)
-    logger.info(train_dataset_files) # ['data/demo.train.1.pt']
+    logger.info(train_dataset_files)
 
     logger.info("Building & saving vocabulary...")
     build_save_vocab(train_dataset_files, fields, opt)
 
     logger.info("Building & saving validation data...")
     build_save_dataset('valid', fields, opt)
-
 
 if __name__ == "__main__":
     main()

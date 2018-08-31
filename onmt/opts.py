@@ -46,7 +46,7 @@ def model_opts(parser):
                        embedding sizes will be set to N^feat_vec_exponent
                        where N is the number of values the feature takes.""")
 
-    # Encoder-Deocder Options
+    # Encoder-Decoder Options
     group = parser.add_argument_group('Model- Encoder-Decoder')
     group.add_argument('-model_type', default='text',
                        help="""Type of source model to use. Allows
@@ -70,7 +70,7 @@ def model_opts(parser):
                        help='Number of layers in the encoder')
     group.add_argument('-dec_layers', type=int, default=2,
                        help='Number of layers in the decoder')
-    group.add_argument('-rnn_size', type=int, default=55,
+    group.add_argument('-rnn_size', type=int, default=500,
                        help='Size of rnn hidden states')
     group.add_argument('-cnn_kernel_width', type=int, default=3,
                        help="""Size of windows in the cnn, the kernel_size is
@@ -104,6 +104,8 @@ def model_opts(parser):
                        choices=['dot', 'general', 'mlp'],
                        help="""The attention type to use:
                        dotprod or general (Luong) or MLP (Bahdanau)""")
+    group.add_argument('-global_attention_function', type=str,
+                       default="softmax", choices=["softmax", "sparsemax"])
     group.add_argument('-self_attn_type', type=str, default="scaled-dot",
                        help="""Self attention type in Transformer decoder
                        layer -- currently "scaled-dot" or "average" """)
@@ -112,9 +114,14 @@ def model_opts(parser):
     group.add_argument('-transformer_ff', type=int, default=2048,
                        help='Size of hidden transformer feed-forward')
 
-    # Genenerator and loss options.
+    # Generator and loss options.
     group.add_argument('-copy_attn', action="store_true",
                        help='Train copy attention layer.')
+    group.add_argument('-generator_function', default="log_softmax",
+                       choices=["log_softmax", "sparsemax"],
+                       help="""Which function to use for generating
+                       probabilities over the target vocabulary (choices:
+                       log_softmax, sparsemax)""")
     group.add_argument('-copy_attn_force', action="store_true",
                        help='When available, train to copy.')
     group.add_argument('-reuse_copy_attn', action="store_true",
@@ -174,7 +181,7 @@ def preprocess_opts(parser):
                        one word per line.""")
     group.add_argument('-ans_vocab', default="",
                        help="""Path to an existing answer vocabulary. 
-                       Format: one word per line.""")
+                        Format: one word per line.""")
 
     group.add_argument('-features_vocabs_prefix', type=str, default='',
                        help="Path prefix to existing features vocabularies")
@@ -185,11 +192,9 @@ def preprocess_opts(parser):
     group.add_argument('-ans_vocab_size', type=int, default=50000,
                        help="Size of the answer vocabulary")
 
-
     group.add_argument('-src_words_min_frequency', type=int, default=0)
     group.add_argument('-tgt_words_min_frequency', type=int, default=0)
     group.add_argument('-ans_words_min_frequency', type=int, default=0)
-
 
     group.add_argument('-dynamic_dict', action='store_true',
                        help="Create dynamic dictionaries")
@@ -207,9 +212,9 @@ def preprocess_opts(parser):
     group.add_argument('-tgt_seq_length_trunc', type=int, default=0,
                        help="Truncate target sequence length.")
     group.add_argument('-ans_seq_length', type=int, default=50,
-                       help="Maximum target sequence length to keep.")
+                       help="Maximum source sequence length")
     group.add_argument('-ans_seq_length_trunc', type=int, default=0,
-                       help="Truncate target sequence length.")
+                       help="Truncate source sequence length.")
     group.add_argument('-lower', action='store_true', help='lowercase data')
 
     # Data processing options
@@ -318,7 +323,7 @@ def train_opts(parser):
                        Approximately equivalent to updating
                        batch_size * accum_count batches at once.
                        Recommended for Transformer.""")
-    group.add_argument('-valid_steps', type=int, default=10000,
+    group.add_argument('-valid_steps', type=int, default=10,#10000,
                        help='Perfom validation every X steps')
     group.add_argument('-valid_batch_size', type=int, default=32,
                        help='Maximum batch size for validation')

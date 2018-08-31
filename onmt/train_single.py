@@ -86,20 +86,21 @@ def main(opt):
     # (All datasets have the same data_type).
     first_dataset = next(lazily_load_dataset("train", opt))
     data_type = first_dataset.data_type
-    logger.info("data_type")
-    logger.info(data_type)
-    logger.info("first_dataset")
-    logger.info(first_dataset)
-    logger.info(first_dataset.__dict__)
+    #logger.info("data_type")
+    #logger.info(data_type)
+    #logger.info("first_dataset")
+    #logger.info(first_dataset)
+    #logger.info(first_dataset.__dict__)
 
     # Load fields generated from preprocess phase.
     fields = _load_fields(first_dataset, data_type, opt, checkpoint)
-    logger.info("fields ")
+    #logger.info("fields ")
+    '''
     for k, v in fields.items():
         logger.info(k)
         logger.info(v)
         logger.info("*************")
-
+    '''
     # Report src/tgt features.
 
     src_features, tgt_features = _collect_report_features(fields)
@@ -113,8 +114,8 @@ def main(opt):
     # Build model.
     model = build_model(model_opt, opt, fields, checkpoint)
     n_params, enc, dec = _tally_parameters(model)
-    logger.info('encoder: %d' % enc)
-    logger.info('decoder: %d' % dec)
+    #logger.info('encoder: %d' % enc)
+    #logger.info('decoder: %d' % dec)
     logger.info('* number of parameters: %d' % n_params)
     _check_save_model_path(opt)
 

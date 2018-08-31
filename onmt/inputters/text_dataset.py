@@ -157,7 +157,7 @@ class TextDataset(DatasetBase):
         Returns:
             (example_dict iterator, num_feats) tuple.
         """
-        assert side in ['src', 'tgt']
+        assert side in ['src', 'tgt', 'ans']
 
         if text_iter is None:
             if text_path is not None:
@@ -243,7 +243,7 @@ class TextDataset(DatasetBase):
                 torchtext.data.Field(init_token=BOS_WORD, eos_token=EOS_WORD,
                                      pad_token=PAD_WORD)
 
-        fields["ans"] = torchtext.data.Field(pad_token=PAD_WORD)
+        fields["ans"] = torchtext.data.Field(pad_token=PAD_WORD, include_lengths=True)
 
         for j in range(n_ans_features):
             fields["ans_feat_" + str(j)] = \

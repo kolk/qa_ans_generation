@@ -147,42 +147,6 @@ class Trainer(object):
                         logger.info("GpuRank %d: index: %d accum: %d"
                                     % (self.gpu_rank, i, accum))
                     cur_dataset = train_iter.get_cur_dataset()
-                    logger.info("cur_dataset examples keys")
-                    logger.info(cur_dataset.examples[0].__dict__.keys())
-                    logger.info("src ")
-                    logger.info(cur_dataset.examples[0].src)
-                    logger.info("ans ")
-                    logger.info(cur_dataset.examples[0].ans)
-                    logger.info("tgt ")
-                    logger.info(cur_dataset.examples[0].tgt)
-
-                    logger.info(batch)
-                    logger.info(batch.src[0])
-                    logger.info(batch.src[1])
-                    logger.info("batch src")
-                    logger.info(len(batch.src))
-                    logger.info("batch tgt")
-                    logger.info(len(batch.tgt))
-                    logger.info("batch ans")
-                    logger.info(len(batch.ans))
-
-                    max_i = 0
-                    max_i2 = 0
-                    logger.info("batch src")
-                    '''
-                    for b in batch.src:
-                        for b_ in b:
-                            logger.info("b batch src")
-                            logger.info(b)
-                            max_index_src3 = max(torch.b_)
-                            #max_index_src = max(b[0][:])
-                            #max_index_src2 = max(b[1][:])
-                            max_i = max(max_index_src3, max_i)
-                            #max_i2 = max(max_index_src2, max_i2)
-                    logger.info("max index " + str(max_i))
-                    #logger.info("max index2 " + str(max_i2))
-                    #logger.info("src len " + str(len(batch.__dict__['src'])) + " tgt len " + str(len(batch.__dict__['tgt'])))
-                    '''
 
                     self.train_loss.cur_dataset = cur_dataset
 
@@ -267,14 +231,25 @@ class Trainer(object):
             ans = inputters.make_features(batch, 'ans', self.data_type)
             if self.data_type == 'text':
                 _, src_lengths = batch.src
+                #### Modified #######
+                #logger.info(batch.src[0].size())
+                #logger.info(batch.src[1].size())
+                #logger.info("batch ans")
+                #logger.info(batch.ans[0].size())
+                #logger.info(batch.ans[1].size())
+                _, ans_lengths = batch.ans
+                #####################
             else:
                 src_lengths = None
+                ###### Modified #######
+                ans_lengths = None
+                #######################
 
             tgt = inputters.make_features(batch, 'tgt')
 
             # F-prop through the model.
             #src, ans, tgt, lengths, dec_state = None)
-            outputs, attns, _ = self.model(src, ans, tgt, src_lengths)
+            outputs, attns, _ = self.model(src, ans, tgt, src_lengths, ans_lengths)
 
             # Compute loss.
             batch_stats = self.valid_loss.monolithic_compute_loss(
@@ -326,6 +301,11 @@ class Trainer(object):
                 #src, ans, tgt, lengths, dec_state=None)
                 outputs, attns, dec_state = \
                     self.model(src, ans, tgt, src_lengths, dec_state)
+                #logger.info("outputs")
+                #logger.info(outputs.size())
+                #logger.info(attns.keys())
+                #logger.info(dec_state.hidden[0].size())
+
 
                 # 3. Compute loss in shards for memory efficiency.
                 batch_stats = self.train_loss.sharded_compute_loss(
