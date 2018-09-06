@@ -192,7 +192,9 @@ def build_dataset(fields, data_type, src_data_iter=None, src_path=None,
     number of features.
     """
     def _make_examples_nfeats_tpl(data_type, src_data_iter, src_path, src_dir,
-                                  src_seq_length_trunc, side):
+                                  src_seq_length_trunc, sample_rate,
+                                  window_size, window_stride,
+                                  window, normalize_audio, side):
         """
         Process the corpus into (example_dict iterator, num_feats) tuple
         on source side for different 'data_type'.
@@ -207,11 +209,15 @@ def build_dataset(fields, data_type, src_data_iter=None, src_path=None,
 
     src_examples_iter, num_src_feats = \
         _make_examples_nfeats_tpl(data_type, src_data_iter, src_path, src_dir,
-                                  src_seq_length_trunc, "src")
+                                  src_seq_length_trunc, sample_rate,
+                                  window_size, window_stride,
+                                  window, normalize_audio, "src")
 
     ans_examples_iter, num_ans_feats = \
         _make_examples_nfeats_tpl(data_type, ans_data_iter, ans_path, ans_dir,
-                                  ans_seq_length_trunc, "ans")
+                                  ans_seq_length_trunc, sample_rate,
+                                  window_size, window_stride,
+                                  window, normalize_audio, "ans")
 
     # For all data types, the tgt side corpus is in form of text.
     tgt_examples_iter, num_tgt_feats = \

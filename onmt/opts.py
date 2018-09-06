@@ -443,6 +443,9 @@ def translate_opts(parser):
                        help='Source directory for image or audio files')
     group.add_argument('-tgt',
                        help='True target sequence (optional)')
+    group.add_argument('-ans', required=True,
+                       help="""Source answer to decode (one line per
+                       sequence)""")
     group.add_argument('-output', default='pred.txt',
                        help="""Path to output the predictions (each line will
                        be the decoded sequence""")
