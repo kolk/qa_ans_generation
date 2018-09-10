@@ -59,7 +59,8 @@ class NMTModel(nn.Module):
             self.decoder(tgt, memory_bank, memory_bank_ans,
                          enc_state if dec_state is None
                          else dec_state,
-                         memory_lengths=lengths)
+                         memory_lengths=lengths,
+                         memory_lengths_ans=ans_lengths)
         if self.multigpu:
             # Not yet supported on multi-gpu
             dec_state = None

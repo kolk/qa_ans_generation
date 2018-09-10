@@ -205,10 +205,8 @@ class GlobalAttention(nn.Module):
 
         # compute attention scores, as in Luong et al.
         align = self.score(source, memory_bank)
-
         ####### Modified ################
         align_ans = self.score(source, memory_bank_ans)
-
         #################################3
 
 
@@ -217,10 +215,13 @@ class GlobalAttention(nn.Module):
             mask = mask.unsqueeze(1)  # Make it broadcastable.
             align.masked_fill_(1 - mask, -float('inf'))
 
+        ################# Modified #################3
         if memory_lengths_ans is not None:
-            mask = sequence_mask(memory_lengths_ans, max_len=align.size(-1))
-            mask = mask.unsqueeze(1)  # Make it broadcastable.
-            align_ans.masked_fill_(1 - mask, -float('inf'))
+            mask_ans = sequence_mask(memory_lengths_ans, max_len=align_ans.size(-1))
+            mask_ans = mask_ans.unsqueeze(1)  # Make it broadcastable.
+            align_ans.masked_fill_(1 - mask_ans, -float('inf'))
+        ##################################################
+
 
         # Softmax to normalize attention weights
         align_vectors = self.softmax(align.view(batch*target_l, source_l))
@@ -231,8 +232,10 @@ class GlobalAttention(nn.Module):
         #logger.info("new align vectors")
         #logger.info(align_vectors.size())
 
+        ########### Modified ##########################
         align_vectors_ans = self.softmax(align_ans.view(batch * target_l, source_ans_l))
         align_vectors_ans = align_vectors_ans.view(batch, target_l, source_ans_l)
+        #############################################
 
         # each context vector c_t is the weighted average
         # over all the source hidden states
@@ -268,7 +271,7 @@ class GlobalAttention(nn.Module):
             batch_ans_, source_l_ans_ = align_vectors_ans.size()
             aeq(batch, batch_)
             aeq(source_l, source_l_)
-            aeq(source_l, source_l_ans_)
+            aeq(source_ans_l, source_l_ans_)
         else:
             attn_h = attn_h.transpose(0, 1).contiguous()
             align_vectors = align_vectors.transpose(0, 1).contiguous()

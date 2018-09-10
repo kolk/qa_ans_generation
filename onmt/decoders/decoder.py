@@ -115,7 +115,7 @@ class RNNDecoderBase(nn.Module):
         self._reuse_copy_attn = reuse_copy_attn
 
     def forward(self, tgt, memory_bank, memory_bank_ans, state, memory_lengths=None,
-                step=None):
+                memory_lengths_ans=None, step=None):
         """
         Args:
             tgt (`LongTensor`): sequences of padded tokens
@@ -148,7 +148,7 @@ class RNNDecoderBase(nn.Module):
 
         # Run the forward pass of the RNN.
         decoder_final, decoder_outputs, attns = self._run_forward_pass(
-            tgt, memory_bank, memory_bank_ans, state, memory_lengths=memory_lengths)
+            tgt, memory_bank, memory_bank_ans, state, memory_lengths=memory_lengths, memory_lengths_ans=memory_lengths_ans)
 
         # Update the state with the result.
         final_output = decoder_outputs[-1]
@@ -244,7 +244,7 @@ class StdRNNDecoder(RNNDecoderBase):
     or `copy_attn` support.
     """
 
-    def _run_forward_pass(self, tgt, memory_bank, memory_bank_ans, state, memory_lengths=None):
+    def _run_forward_pass(self, tgt, memory_bank, memory_bank_ans, state, memory_lengths=None, memory_lengths_ans=None):
         """
         Private helper for running the specific RNN forward pass.
         Must be overriden by all subclasses.
@@ -354,7 +354,7 @@ class InputFeedRNNDecoder(RNNDecoderBase):
           G --> H
     """
 
-    def _run_forward_pass(self, tgt, memory_bank, memory_bank_ans,  state, memory_lengths=None):
+    def _run_forward_pass(self, tgt, memory_bank, memory_bank_ans,  state, memory_lengths=None, memory_lengths_ans=None):
         """
         See StdRNNDecoder._run_forward_pass() for description
         of arguments and return values.
@@ -429,7 +429,7 @@ class InputFeedRNNDecoder(RNNDecoderBase):
                 memory_bank.transpose(0, 1),
                 memory_bank_ans.transpose(0, 1),
                 memory_lengths=memory_lengths,
-                memory_lengths_ans = memory_lengths)
+                memory_lengths_ans = memory_lengths_ans)
             #logger.info("decoder_output")
             #logger.info(decoder_output.size())
             #logger.info("p_attn")

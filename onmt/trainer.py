@@ -285,9 +285,14 @@ class Trainer(object):
 
             if self.data_type == 'text':
                 _, src_lengths = batch.src
+                ########### Modified ##################
+                _, ans_lengths = batch.ans
+                #######################################
+
                 report_stats.n_src_words += src_lengths.sum().item()
             else:
                 src_lengths = None
+                ans_lengths = None
 
             tgt_outer = inputters.make_features(batch, 'tgt')
 
@@ -300,7 +305,7 @@ class Trainer(object):
                     self.model.zero_grad()
                 #src, ans, tgt, lengths, dec_state=None)
                 outputs, attns, dec_state = \
-                    self.model(src, ans, tgt, src_lengths, dec_state)
+                    self.model(src, ans, tgt, src_lengths, ans_lengths, dec_state)
                 #logger.info("outputs")
                 #logger.info(outputs.size())
                 #logger.info(attns.keys())
