@@ -404,6 +404,7 @@ class OrderedIterator(torchtext.data.Iterator):
                     for b in random_shuffler(list(p_batch)):
                         yield b
             self.batches = _pool(self.data(), self.random_shuffler)
+            '''
             for j, b in enumerate(self.batches):
                 if j > 5:
                     break
@@ -413,6 +414,7 @@ class OrderedIterator(torchtext.data.Iterator):
                 #logger.info(len(b[0].src))
                 #logger.info(len(b[0].ans))
                 #logger.info("(((((((((()))))))))))")
+            '''
         else:
             self.batches = []
             for b in torchtext.data.batch(self.data(), self.batch_size,
@@ -468,6 +470,7 @@ class DatasetLazyIter(object):
                 logger.info("OrderedIterator batch ans")
                 logger.info(len(batch.ans))
             '''
+            logger.info("batch in cur_iter")
             for batch in self.cur_iter:
                 yield batch
             self.cur_iter = self._next_dataset_iterator(dataset_iter)

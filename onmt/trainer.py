@@ -223,19 +223,22 @@ class Trainer(object):
 
         stats = onmt.utils.Statistics()
 
+        #logger.info("inside validate")
         for batch in valid_iter:
+            #logger.info("batch in valid iter")
             cur_dataset = valid_iter.get_cur_dataset()
             self.valid_loss.cur_dataset = cur_dataset
 
             src = inputters.make_features(batch, 'src', self.data_type)
             ans = inputters.make_features(batch, 'ans', self.data_type)
+            #logger.info("self.data_type " + self.data_type)
             if self.data_type == 'text':
                 _, src_lengths = batch.src
                 #### Modified #######
                 #logger.info(batch.src[0].size())
                 #logger.info(batch.src[1].size())
                 #logger.info("batch ans")
-                #logger.info(batch.ans[0].size())
+                #logger.info(batch.ans[0])
                 #logger.info(batch.ans[1].size())
                 _, ans_lengths = batch.ans
                 #####################
@@ -246,7 +249,6 @@ class Trainer(object):
                 #######################
 
             tgt = inputters.make_features(batch, 'tgt')
-
             # F-prop through the model.
             #src, ans, tgt, lengths, dec_state = None)
             outputs, attns, _ = self.model(src, ans, tgt, src_lengths, ans_lengths)

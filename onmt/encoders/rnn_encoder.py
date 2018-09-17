@@ -10,6 +10,7 @@ from torch.nn.utils.rnn import pad_packed_sequence as unpack
 from onmt.encoders.encoder import EncoderBase
 from onmt.utils.rnn_factory import rnn_factory
 from onmt.utils.logging import logger
+from onmt.utils.misc import pack_padded_sequence_ans
 
 class RNNEncoder(EncoderBase):
     """ A generic recurrent neural network encoder.
@@ -50,7 +51,7 @@ class RNNEncoder(EncoderBase):
                                     hidden_size,
                                     num_layers)
 
-    def forward(self, src, lengths=None):
+    def forward(self, src, lengths=None, type="src"):
         "See :obj:`EncoderBase.forward()`"
         self._check_args(src, lengths)
 
@@ -70,7 +71,17 @@ class RNNEncoder(EncoderBase):
         if lengths is not None and not self.no_pack_padded_seq:
             # Lengths data is wrapped inside a Tensor.
             lengths = lengths.view(-1).tolist()
-            packed_emb = pack(emb, lengths)
+            '''
+            logger.info("forward in encoder")
+            logger.info(lengths)
+            logger.info(emb.size())
+            logger.info(len(lengths))
+            logger.info("type " + type)
+            '''
+            if type ==  "src":
+                packed_emb = pack(emb, lengths)
+            elif type=="ans":
+                packed_emb = pack_padded_sequence_ans(emb, lengths)
 
             '''
             ########### Modified #####################

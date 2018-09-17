@@ -539,10 +539,10 @@ class Translator(object):
             _, ans_lengths = batch.ans
             ####################################
 
-        enc_states, memory_bank = self.model.encoder(src, src_lengths)
+        enc_states, memory_bank = self.model.encoder(src, src_lengths, "src")
 
         ######### Modified ##################
-        enc_states_ans, memory_bank_ans = self.model.encoder_ans(ans, ans_lengths)
+        enc_states_ans, memory_bank_ans = self.model.encoder_ans(ans, ans_lengths, "ans")
         #################################
 
         dec_states = self.model.decoder.init_decoder_state(
@@ -672,10 +672,10 @@ class Translator(object):
         #####################################
 
         #  (1) run the encoder on the src
-        enc_states, memory_bank = self.model.encoder(src, src_lengths)
+        enc_states, memory_bank = self.model.encoder(src, src_lengths, "src")
 
         ######### Modified ##################
-        enc_states_ans, memory_bank_ans = self.model.encoder_ans(ans, ans_lengths)
+        enc_states_ans, memory_bank_ans = self.model.encoder_ans(ans, ans_lengths, "ans")
 
 
         dec_states = \
