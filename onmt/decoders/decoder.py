@@ -185,7 +185,6 @@ class RNNDecoderBase(nn.Module):
             if self.bidirectional_encoder:
                 hidden = torch.cat([hidden[0:hidden.size(0):2],
                                     hidden[1:hidden.size(0):2]], 2)
-
             return hidden
 
         #logger.info("init decoder state")
@@ -195,15 +194,15 @@ class RNNDecoderBase(nn.Module):
         #logger.info(len(encoder_ans_final))
 
         ######### Modified ################################
-        l = [_fix_enc_hidden(enc_hid) for enc_hid in encoder_final] # list
-        l_ans = [_fix_enc_hidden(enc_hid) for enc_hid in encoder_ans_final] # list
+        #l = [_fix_enc_hidden(enc_hid) for enc_hid in encoder_final] # list
+        #l_ans = [_fix_enc_hidden(enc_hid) for enc_hid in encoder_ans_final] # list
+        '''
         for enc_hid in encoder_final:
             hid = _fix_enc_hidden(enc_hid)
             #logger.info("fix enc hidden")
             #logger.info(hid.size())
-        l_final = [torch.cat([enc_q, enc_ans], 2) for enc_q, enc_ans in zip(encoder_final, encoder_ans_final)]
-        #logger.info("l_final")
-        #logger.info(l_final[0].size())
+        '''
+        l_final = [_fix_enc_hidden(torch.cat([enc_q, enc_ans], 2)) for enc_q, enc_ans in zip(encoder_final, encoder_ans_final)]
         ####################################
 
         #logger.info(len(l))

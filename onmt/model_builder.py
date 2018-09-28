@@ -52,8 +52,9 @@ def build_encoder(opt, embeddings):
         opt: the option in current environment.
         embeddings (Embeddings): vocab embeddings for this encoder.
     """
-    if opt.encoder_type == "rnn":
+    if opt.encoder_type == "rnn" or opt.encoder_type == "brnn":
         # "rnn" or "brnn"
+        logger.info("opt.encoder_type " + opt.encoder_type + " opt.brnn " + str(opt.brnn))
         return RNNEncoder(opt.rnn_type, opt.brnn, opt.enc_layers,
                           opt.rnn_size, opt.dropout, embeddings,
                           opt.bridge)
