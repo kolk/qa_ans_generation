@@ -253,6 +253,9 @@ class Trainer(object):
             #src, ans, tgt, lengths, dec_state = None)
             outputs, attns, _ = self.model(src, ans, tgt, src_lengths, ans_lengths)
 
+            #logger.info("outputs of model")
+            #logger.info(outputs)
+
             # Compute loss.
             batch_stats = self.valid_loss.monolithic_compute_loss(
                 batch, outputs, attns)

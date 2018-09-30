@@ -45,7 +45,7 @@ def build_embeddings(opt, word_dict, feature_dicts, for_encoder=True):
                       feat_vocab_sizes=num_feat_embeddings,
                       sparse=opt.optim == "sparseadam")
 
-def build_encoder(opt, embeddings):
+def build_encoder(opt, embeddings, type="src"):
     """
     Various encoder dispatcher function.
     Args:
@@ -55,6 +55,12 @@ def build_encoder(opt, embeddings):
     if opt.encoder_type == "rnn" or opt.encoder_type == "brnn":
         # "rnn" or "brnn"
         logger.info("opt.encoder_type " + opt.encoder_type + " opt.brnn " + str(opt.brnn))
+        '''
+        if type == "ans":
+            rnn_size = 256
+        elif type == "src":
+            rnn_size = opt.rnn_size
+        '''
         return RNNEncoder(opt.rnn_type, opt.brnn, opt.enc_layers,
                           opt.rnn_size, opt.dropout, embeddings,
                           opt.bridge)
@@ -141,7 +147,7 @@ def build_base_model(model_opt, fields, gpu, checkpoint=None):
         #logger.info("src embeddings")
         #logger.info(src_embeddings)
         logger.info("bulding question encoder")
-        encoder = build_encoder(model_opt, src_embeddings)
+        encoder = build_encoder(model_opt, src_embeddings, "src")
         logger.info(encoder)
 
         ############### Modified ###############################
@@ -149,7 +155,7 @@ def build_base_model(model_opt, fields, gpu, checkpoint=None):
         ans_dict = fields["ans"].vocab
         ans_embeddings = build_embeddings(model_opt, ans_dict, feature_dicts)
         logger.info("building answer encoder")
-        encoder_ans = build_encoder(model_opt, ans_embeddings)
+        encoder_ans = build_encoder(model_opt, ans_embeddings, "ans")
         logger.info(encoder_ans)
         ##########################################################s
 

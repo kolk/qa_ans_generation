@@ -533,6 +533,7 @@ class Translator(object):
         #####################################
 
         src_lengths = None
+        ans_lengths = None
         if data_type == 'text':
             _, src_lengths = batch.src
             ############# Modified ###############
@@ -597,6 +598,7 @@ class Translator(object):
             dec_out, dec_states, attn = self.model.decoder(
                 inp, memory_bank, memory_bank_ans, dec_states,
                 memory_lengths=memory_lengths,
+                memory_lengths_ans=memory_lengths_ans,
                 step=i)
             ####################################
 
@@ -687,7 +689,7 @@ class Translator(object):
         tt = torch.cuda if self.cuda else torch
         gold_scores = tt.FloatTensor(batch.batch_size).fill_(0)
         dec_out, _, _ = self.model.decoder(
-            tgt_in, memory_bank, memory_bank_ans, dec_states, memory_lengths=src_lengths)
+            tgt_in, memory_bank, memory_bank_ans, dec_states, memory_lengths=src_lengths, memory_lengths_ans=ans_lengths)
 
         tgt_pad = self.fields["tgt"].vocab.stoi[inputters.PAD_WORD]
         for dec, tgt in zip(dec_out, batch.tgt[1:].data):
