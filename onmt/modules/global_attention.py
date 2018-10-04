@@ -66,23 +66,28 @@ class GlobalAttention(nn.Module):
 
     """
 
-    def __init__(self, dim, coverage=False, attn_type="dot"):
+    def __init__(self, dim, coverage=False, attn_type="dot",  attn_func="softmax"):
         super(GlobalAttention, self).__init__()
 
         self.dim = dim
         self.attn_type = attn_type
         assert (self.attn_type in ["dot", "general", "mlp"]), (
             "Please select a valid attention type.")
+        self.attn_func = attn_func
 
         if self.attn_type == "general":
+            ######### Modified ##################
             self.linear_in = nn.Linear(dim*2, dim, bias=False)
+            ################################
         elif self.attn_type == "mlp":
             self.linear_context = nn.Linear(dim, dim, bias=False)
             self.linear_query = nn.Linear(dim, dim, bias=True)
             self.v = nn.Linear(dim, 1, bias=False)
         # mlp wants it with bias
         out_bias = self.attn_type == "mlp"
+        ############ Modified ####################
         self.linear_out = nn.Linear(dim * 4, dim*2, bias=out_bias)
+        ##########################################
 
         self.softmax = nn.Softmax(dim=-1)
         self.tanh = nn.Tanh()
@@ -225,32 +230,40 @@ class GlobalAttention(nn.Module):
 
         # Softmax to normalize attention weights
         align_vectors = self.softmax(align.view(batch*target_l, source_l))
-        #logger.info("align vectors")
-        #logger.info(align_vectors.size())
+        logger.info("align vectors")
+        logger.info(align_vectors.size())
 
         align_vectors = align_vectors.view(batch, target_l, source_l)
-        #logger.info("new align vectors")
-        #logger.info(align_vectors.size())
 
         ########### Modified ##########################
         align_vectors_ans = self.softmax(align_ans.view(batch * target_l, source_ans_l))
+        logger.info("align vectors ans")
+        logger.info(align_vectors_ans.size())
         align_vectors_ans = align_vectors_ans.view(batch, target_l, source_ans_l)
+
         #############################################
 
         # each context vector c_t is the weighted average
         # over all the source hidden states
         c = torch.bmm(align_vectors, memory_bank)
-        #logger.info("c ")
-        #logger.info(c.size())
+        logger.info("c ")
+        logger.info(c.size())
+        ################ Modified #####################3
         c_ans = torch.bmm(align_vectors_ans, memory_bank_ans)
+        logger.info("c_ans")
+        logger.info(c_ans.size())
 
         c_final = torch.cat([c, c_ans], 2)
+        logger.info("c_final")
+        logger.info(c_final.size())
 
         # concatenate
         concat_c = torch.cat([c_final, source], 2).view(batch*target_l, dim*4)
-        #logger.info("concat_c")
-        #logger.info(concat_c.size())
+        logger.info("concat_c")
+        logger.info(concat_c.size())
+        logger.info("************")
         attn_h = self.linear_out(concat_c).view(batch, target_l, dim*2)
+        ####################################################
 
         #logger.info("attn_h size")
         #logger.info(attn_h.size())

@@ -21,6 +21,7 @@ from onmt.utils.logging import logger as logger_
 
 
 
+
 def build_translator(opt, report_score=True, logger=None, out_file=None):
     if out_file is None:
         out_file = codecs.open(opt.output, 'w+', 'utf-8')
@@ -225,6 +226,15 @@ class Translator(object):
 
         for batch in data_iter:
             batch_data = self.translate_batch(batch, data, fast=self.fast)
+            logger_.info("batch_data")
+            logger_.info(batch_data.keys())
+            for k in batch_data.keys():
+                logger_.info(k)
+                logger_.info(type(batch_data[k]))
+                logger_.info(len(batch_data[k]))
+                logger_.info(len(batch_data[k]))
+
+            logger_.info("****************")
             translations = builder.from_batch(batch_data)
 
             for trans in translations:
@@ -612,6 +622,7 @@ class Translator(object):
                 out = unbottle(out)
                 # beam x tgt_vocab
                 beam_attn = unbottle(attn["std"])
+                beam_attn_ans = unbottle(attn["std_ans"])
             else:
                 out = self.model.generator.forward(dec_out,
                                                    attn["copy"].squeeze(0),
@@ -627,7 +638,8 @@ class Translator(object):
             # (c) Advance each beam.
             for j, b in enumerate(beam):
                 b.advance(out[:, j],
-                          beam_attn.data[:, j, :memory_lengths[j]])
+                          beam_attn.data[:, j, :memory_lengths[j]],
+                          beam_attn_ans.data[:, j, :memory_lengths_ans[j]])
                 dec_states.beam_update(j, b.get_current_origin(), beam_size)
 
         # (4) Extract sentences from beam.

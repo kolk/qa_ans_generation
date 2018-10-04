@@ -1,6 +1,7 @@
 from __future__ import division
 import torch
 from onmt.translate import penalties
+from onmt.utils.logging import logger
 
 
 class Beam(object):
@@ -71,7 +72,7 @@ class Beam(object):
         "Get the backpointers for the current timestep."
         return self.prev_ks[-1]
 
-    def advance(self, word_probs, attn_out):
+    def advance(self, word_probs, attn_out, attn_out_ans):
         """
         Given prob over words for every last beam `wordLk` and attention
         `attn_out`: Compute and update the beam search.
@@ -84,6 +85,14 @@ class Beam(object):
         Returns: True if beam search is complete.
         """
         num_words = word_probs.size(1)
+        logger.info("attn_out size")
+        logger.info(attn_out.size())
+        logger.info("attn_out_ans size")
+        logger.info(attn_out_ans.size())
+        attn_out = torch.cat([attn_out, attn_out_ans], 1)
+        logger.info("attn_out new size")
+        logger.info(attn_out.size())
+        logger.info("************************")
         if self.stepwise_penalty:
             self.global_scorer.update_score(self, attn_out)
         # force the output to be longer than self.min_length
