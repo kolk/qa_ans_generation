@@ -89,7 +89,9 @@ class Beam(object):
         logger.info(attn_out.size())
         logger.info("attn_out_ans size")
         logger.info(attn_out_ans.size())
+        ##############3 Irshad ##################################
         attn_out = torch.cat([attn_out, attn_out_ans], 1)
+        ######################################################
         logger.info("attn_out new size")
         logger.info(attn_out.size())
         logger.info("************************")

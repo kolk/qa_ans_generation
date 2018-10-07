@@ -32,6 +32,7 @@ class TranslationBuilder(object):
         self.has_tgt = has_tgt
 
     def _build_target_tokens(self, src, src_vocab, src_raw, src_ans, pred, attn):
+        ############### Irshad ######################
         src_ = src_raw + src_ans
         vocab = self.fields["tgt"].vocab
         tokens = []
@@ -56,6 +57,7 @@ class TranslationBuilder(object):
                     logger.info("src_raw")
                     logger.info(len(src_raw))
                     tokens[i] = src_[max_index[0]]
+        ################# end Irshad #####################
         return tokens
 
     def from_batch(self, translation_batch):
