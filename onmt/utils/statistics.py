@@ -94,9 +94,11 @@ class Statistics(object):
 
     def ppl(self):
         """ compute perplexity """
+        '''
         logger.info("ppl statistics")
         logger.info("self.loss " + str(self.loss))
         logger.info("self.n_words " + str(self.n_words))
+        '''
         return math.exp(min(self.loss / self.n_words, 100))
 
     def elapsed_time(self):

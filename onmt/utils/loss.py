@@ -10,7 +10,7 @@ import torch.nn as nn
 
 import onmt
 import onmt.inputters as inputters
-
+from onmt.utils.logging import logger
 
 def build_loss_compute(model, tgt_vocab, opt, train=True):
     """
@@ -86,7 +86,7 @@ class LossComputeBase(nn.Module):
         """
         return NotImplementedError
 
-    def monolithic_compute_loss(self, batch, output, attns):
+    def monolithic_compute_loss(self, batch, output, attns, train):
         """
         Compute the forward loss for the batch.
 
@@ -102,13 +102,13 @@ class LossComputeBase(nn.Module):
         """
         range_ = (0, batch.tgt.size(0))
         shard_state = self._make_shard_state(batch, output, range_, attns)
-        _, batch_stats = self._compute_loss(batch, **shard_state)
+        _, batch_stats = self._compute_loss(batch, train, **shard_state)
 
         return batch_stats
 
     def sharded_compute_loss(self, batch, output, attns,
                              cur_trunc, trunc_size, shard_size,
-                             normalization):
+                             normalization, train=True):
         """Compute the forward loss and backpropagate.  Computation is done
         with shards and optionally truncation for memory efficiency.
 
@@ -140,13 +140,13 @@ class LossComputeBase(nn.Module):
         range_ = (cur_trunc, cur_trunc + trunc_size)
         shard_state = self._make_shard_state(batch, output, range_, attns)
         for shard in shards(shard_state, shard_size):
-            loss, stats = self._compute_loss(batch, **shard)
+            loss, stats = self._compute_loss(batch, train, **shard)
             loss.div(float(normalization)).backward()
             batch_stats.update(stats)
 
         return batch_stats
 
-    def _stats(self, loss, scores, target):
+    def _stats(self, loss, scores, target, train=False):
         """
         Args:
             loss (:obj:`FloatTensor`): the loss computed by the loss criterion.
@@ -163,6 +163,8 @@ class LossComputeBase(nn.Module):
                           .sum() \
                           .item()
         num_non_padding = non_padding.sum().item()
+        if not train:
+            logger.info("num_correct " + str(num_correct) + " num_non_padding " + str(num_non_padding))
         return onmt.utils.Statistics(loss.item(), num_non_padding, num_correct)
 
     def _bottle(self, _v):
@@ -199,16 +201,47 @@ class NMTLossCompute(LossComputeBase):
             self.criterion = nn.NLLLoss(weight, size_average=False)
         self.confidence = 1.0 - label_smoothing
 
+
     def _make_shard_state(self, batch, output, range_, attns=None):
         return {
             "output": output,
-            "target": batch.tgt[range_[0] + 1: range_[1]],
+            "target": batch.tgt[range_[0] + 1: range_[1]]
         }
 
-    def _compute_loss(self, batch, output, target):
+    def _compute_loss(self, batch, train, output, target):
         scores = self.generator(self._bottle(output))
-
         gtruth = target.view(-1)
+
+        ########## Modified ###################
+        '''
+        logger.info("scores")
+        logger.info(scores.size())
+        logger.info("target")
+        logger.info(target.size())
+        '''
+        l, b_sz = target.size()
+        if not train:
+            logger.info(str(len(scores)) + " " + str(len(gtruth)))
+            logger.info(scores.size())
+            logger.info(gtruth.size())
+
+            pred = scores.data.max(1)[1]
+            gtruth_data = target.view(-1).data
+            pred = pred.view(l, b_sz)
+            gtruth_data = gtruth_data.view(l, b_sz)
+
+            for i in range(b_sz):
+                b_sent = []
+                b_sent_flat = []
+                for j in range(l):
+                    b_sent.append(self.tgt_vocab.itos[gtruth_data[j][i]])
+                    b_sent_flat.append(self.tgt_vocab.itos[pred[j][i]])
+                logger.info(b_sent)
+                logger.info("pred sent")
+                logger.info(b_sent_flat)
+
+            logger.info("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+
         if self.confidence < 1:
             tdata = gtruth.data
             mask = torch.nonzero(tdata.eq(self.padding_idx)).squeeze(-1)
@@ -226,7 +259,7 @@ class NMTLossCompute(LossComputeBase):
         else:
             loss_data = loss.data.clone()
 
-        stats = self._stats(loss_data, scores.data, target.view(-1).data)
+        stats = self._stats(loss_data, scores.data, target.view(-1).data, train)
 
         return loss, stats
 
