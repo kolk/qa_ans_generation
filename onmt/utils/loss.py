@@ -73,6 +73,21 @@ class LossComputeBase(nn.Module):
         """
         return NotImplementedError
 
+    def _make_shard_state_valid(self, batch, output, range_, attns=None):
+        """
+        Make shard state dictionary for shards() to return iterable
+        shards for efficient loss computation. Subclass must define
+        this method to match its own _compute_loss() interface.
+        Args:
+            batch: the current batch.
+            output: the predict output from the model.
+            range_: the range of examples for computing, the whole
+                    batch or a trunc of it?
+            attns: the attns dictionary returned from the model.
+        """
+        return NotImplementedError
+
+
     def _compute_loss(self, batch, output, target, **kwargs):
         """
         Compute the loss. Subclass must define this method.
@@ -85,6 +100,10 @@ class LossComputeBase(nn.Module):
             **kwargs(optional): additional info for computing loss.
         """
         return NotImplementedError
+
+    def print_output(self, train, output, target, **kwargs):
+        return NotImplementedError
+
 
     def monolithic_compute_loss(self, batch, output, attns, train):
         """
@@ -102,6 +121,8 @@ class LossComputeBase(nn.Module):
         """
         range_ = (0, batch.tgt.size(0))
         shard_state = self._make_shard_state(batch, output, range_, attns)
+        shard_state_valid = self._make_shard_state_valid(batch, output, range_, attns)
+        self.print_output(train, **shard_state_valid)
         _, batch_stats = self._compute_loss(batch, train, **shard_state)
 
         return batch_stats
@@ -205,8 +226,55 @@ class NMTLossCompute(LossComputeBase):
     def _make_shard_state(self, batch, output, range_, attns=None):
         return {
             "output": output,
-            "target": batch.tgt[range_[0] + 1: range_[1]]
+            "target": batch.tgt[range_[0] + 1: range_[1]],
         }
+
+    def _make_shard_state_valid(self, batch, output, range_, attns=None):
+        return {
+            "output": output,
+            "target": batch.tgt[range_[0] + 1: range_[1]],
+            "source": batch.src[0][range_[0] + 1: range_[1]],
+            "answer": batch.ans[0][range_[0] + 1: range_[1]],
+        }
+
+    def print_output(self, train, output, target, source, answer):
+        scores = self.generator(self._bottle(output))
+        gtruth = target.view(-1)
+        l, b_sz = target.size()
+        l_src, b_sz_src = source.size()
+        if not train:
+            logger.info(str(len(scores)) + " " + str(len(gtruth)))
+            logger.info(scores.size())
+            logger.info(gtruth.size())
+
+            pred = scores.data.max(1)[1]
+            gtruth_data = target.view(-1).data
+            src_data = source.view(-1).data
+            pred = pred.view(l, b_sz)
+            gtruth_data = gtruth_data.view(l, b_sz)
+            src_data = src_data.view(l_src, b_sz_src)
+
+            for i in range(b_sz):
+                b_sent = []
+                b_sent_pred = []
+                b_sent_src = []
+                for j in range(l):
+                    b_sent.append(self.tgt_vocab.itos[gtruth_data[j][i]])
+                    b_sent_pred.append(self.tgt_vocab.itos[pred[j][i]])
+
+                for j in range(l_src):
+                    b_sent_src.append(self.tgt_vocab.itos[src_data[j][i]])
+                logger.info("Question: " + " ".join(b_sent_src))
+                logger.info("groundtruth: " + " ".join(b_sent))
+                logger.info("prediction: " + " ".join(b_sent_pred))
+                logger.info("\n\n")
+                print("question: " + " ".join(b_sent_src))
+                print("groundtruth: " + " ".join(b_sent))
+                print("prediction: " + " ".join(b_sent_pred))
+                print("\n\n")
+
+            #logger.info("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+            #print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
     def _compute_loss(self, batch, train, output, target):
         scores = self.generator(self._bottle(output))
@@ -219,7 +287,11 @@ class NMTLossCompute(LossComputeBase):
         logger.info("target")
         logger.info(target.size())
         '''
+
+        '''
         l, b_sz = target.size()
+        l_src, b_sz_src = source.size()
+        logger.info("")
         if not train:
             logger.info(str(len(scores)) + " " + str(len(gtruth)))
             logger.info(scores.size())
@@ -227,20 +299,33 @@ class NMTLossCompute(LossComputeBase):
 
             pred = scores.data.max(1)[1]
             gtruth_data = target.view(-1).data
+            src_data = source.view(-1).data
             pred = pred.view(l, b_sz)
             gtruth_data = gtruth_data.view(l, b_sz)
+            src_data = src_data.view(l_src, b_sz_src)
 
             for i in range(b_sz):
                 b_sent = []
-                b_sent_flat = []
+                b_sent_pred = []
+                b_sent_src = []
                 for j in range(l):
                     b_sent.append(self.tgt_vocab.itos[gtruth_data[j][i]])
-                    b_sent_flat.append(self.tgt_vocab.itos[pred[j][i]])
-                logger.info(b_sent)
-                logger.info("pred sent")
-                logger.info(b_sent_flat)
+                    b_sent_pred.append(self.tgt_vocab.itos[pred[j][i]])
+
+                for j in range(l_src):
+                    b_sent_src.append(self.tgt_vocab.itos[src_data[j][i]])
+                logger.info("Question: " + b_sent_src)
+                logger.info("groundtruth: " + b_sent)
+                logger.info("prediction: " + b_sent_pred)
+
+                print("question: " + b_sent_src)
+                print("groundtruth: " + b_sent)
+                print("prediction: " + b_sent_pred)
+                print("\n\n")
 
             logger.info("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+            print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+        '''
 
         if self.confidence < 1:
             tdata = gtruth.data
